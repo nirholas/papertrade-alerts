@@ -19,7 +19,7 @@ crons = ["* * * * *"]
 binding = "DB"
 database_name = "papertrade-alerts"
 # Replace with the id printed by `wrangler d1 create papertrade-alerts`. Local dev ignores it.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "989666bd-dee1-45eb-8461-4ba68f5f0d0d"
 migrations_dir = "migrations"
 
 [vars]
