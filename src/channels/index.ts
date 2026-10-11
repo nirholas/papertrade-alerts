@@ -86,13 +86,31 @@ export function validateTarget(kind: ChannelKind, raw: string, env: Env): string
   return url.toString();
 }
 
-/** Literal private and link-local addresses. Workers cannot reach private networks anyway; this gives an early, clear error. */
-function isPrivateHost(host: string): boolean {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
-    const [a, b] = host.split('.').map(Number);
-    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+/**
+ * Literal private, loopback, link-local, CGNAT, benchmark, multicast and reserved addresses, plus internal-only names.
+ * Workers cannot reach private networks anyway; this gives an early, clear error and keeps the guard honest.
+ * `URL` has already normalised decimal, octal and hex IPv4 spellings to dotted quads by the time this runs.
+ */
+export function isPrivateHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/\.$/, '');
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) {
+    const [a, b, c] = h.split('.').map(Number);
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 0 && c === 0) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224
+    );
   }
-  return host.endsWith('.local') || host.endsWith('.internal') || host === '[::1]' || host.startsWith('[');
+  if (h.startsWith('[')) return true;
+  if (!h.includes('.')) return true;
+  return ['.local', '.localhost', '.internal', '.lan', '.home', '.corp', '.intranet'].some((suffix) => h.endsWith(suffix)) || h === 'localhost';
 }
 
 async function post(url: string, init: RequestInit, fetchImpl: typeof fetch): Promise<Response> {

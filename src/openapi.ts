@@ -6,14 +6,14 @@ export function openApiDocument(origin: string) {
     openapi: '3.1.0',
     info: {
       title: 'Papertrade Alerts API',
-      version: '0.1.0',
+      version: '0.2.0',
       description: 'Unofficial, not affiliated with Papertrade. Manage alert subscriptions with a one-time management token (Authorization: Bearer ptal_...).',
       license: { name: 'Apache-2.0', identifier: 'Apache-2.0' },
     },
     servers: [{ url: origin }],
     components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } },
     paths: {
-      '/healthz': { get: { summary: 'Liveness and D1 check', responses: ok } },
+      '/healthz': { get: { summary: 'Liveness and D1 check. 503 with database=not_ready until the schema is applied.', responses: { '200': { description: 'OK' }, '503': { description: 'Storage not ready' } } } },
       '/api/status': { get: { summary: 'Channel availability, limits and last cron tick', responses: ok } },
       '/api/accounts': { post: { summary: 'Create an account. Returns the management token once.', responses: { '201': { description: 'Created' } } } },
       '/api/me': {
@@ -37,6 +37,18 @@ export function openApiDocument(origin: string) {
       '/api/alerts': { get: { summary: 'Recent alerts with per-channel delivery status', security: bearer, responses: ok } },
       '/api/deliveries/dead': { get: { summary: 'Dead-letter deliveries', security: bearer, responses: ok } },
       '/api/deliveries/{id}/retry': { post: { summary: 'Re-queue a dead delivery', security: bearer, responses: ok } },
+      '/mcp': {
+        post: {
+          summary: 'Model Context Protocol server (Streamable HTTP, stateless JSON-RPC 2.0). See /docs/mcp.',
+          description: 'Methods: initialize, ping, tools/list, tools/call. Tools preview wallets and manage alert rules and destinations. Nothing signs, sends funds or places orders. Rate limited per client.',
+          requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['jsonrpc', 'method'], properties: { jsonrpc: { const: '2.0' }, id: { type: ['string', 'integer'] }, method: { type: 'string' }, params: { type: 'object' } } } } } },
+          responses: { '200': { description: 'JSON-RPC response (application/json, or one SSE message event when only text/event-stream is accepted)' }, '202': { description: 'Notification accepted' }, '429': { description: 'Rate limited' }, '503': { description: 'Storage not ready' } },
+        },
+        get: { summary: 'Server description and links (JSON). With Accept: text/event-stream returns 405.', responses: ok },
+      },
+      '/.well-known/mcp/server-card.json': { get: { summary: 'MCP server card (SEP-1649 shape) generated from the live tool registry', responses: ok } },
+      '/.well-known/agent-card.json': { get: { summary: 'A2A agent card, skills mapped from the MCP tools', responses: ok } },
+      '/.well-known/api-catalog': { get: { summary: 'RFC 9727 API catalog (application/linkset+json)', responses: ok } },
       '/api/papertrade/{path}': { get: { summary: 'Read-only same-origin proxy for the Papertrade API', responses: ok } },
     },
   };

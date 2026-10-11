@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { createMiddleware } from 'hono/factory';
 import {
   addChannel,
   addWatch,
@@ -12,6 +13,7 @@ import {
   newLinkCode,
   removeChannel,
   removeWatch,
+  sendTestMessage,
   updateWatchRules,
   type Account,
 } from './accounts.js';
@@ -25,6 +27,11 @@ import { processUpdate } from './telegram/commands.js';
 import type { TelegramUpdate } from './telegram/parse.js';
 import type { ChannelKind, Env } from './types.js';
 import { DISCOVERY_PATHS, publicOrigin, serveDiscovery } from './discovery.js';
+import { agentCard, apiCatalog, serverCard } from './discovery-cards.js';
+import { isStorageUnavailable, storageReady, UNAVAILABLE_MESSAGE } from './degrade.js';
+import { handleMcpRequest } from './mcp.js';
+import { mcpServer } from './mcp-tools.js';
+import { allow } from './ratelimit.js';
 
 type Vars = { account: Account };
 export const app = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -39,26 +46,58 @@ app.use('*', async (c, next) => {
 app.onError((err, c) => {
   if (err instanceof ApiError) return c.json({ code: err.code, message: err.message }, err.status as 400);
   if (err instanceof ValidationError) return c.json({ code: 'invalid_rules', message: err.message }, 400);
+  if (isStorageUnavailable(err)) return c.json({ code: 'service_initializing', message: UNAVAILABLE_MESSAGE }, 503, { 'retry-after': '300' });
   console.error('unhandled', err instanceof Error ? err.stack : err);
   return c.json({ code: 'internal_error', message: 'Something went wrong on our side. Try again in a minute.' }, 500);
 });
 
 app.notFound((c) => c.json({ code: 'not_found', message: `${c.req.method} ${new URL(c.req.url).pathname} does not exist. See /openapi.json.` }, 404));
 
+/** Routes that need the schema answer 503 with an explanation until it exists, instead of a 500 stack. */
+const needsStorage = createMiddleware<{ Bindings: Env; Variables: Vars }>(async (c, next) => {
+  if (!(await storageReady(c.env))) return c.json({ code: 'service_initializing', message: UNAVAILABLE_MESSAGE }, 503, { 'retry-after': '300' });
+  await next();
+});
+
 app.get('/healthz', async (c) => {
-  await c.env.DB.prepare('SELECT 1').first();
-  return c.json({ ok: true });
+  if (!(await storageReady(c.env))) return c.json({ ok: false, database: 'not_ready', message: UNAVAILABLE_MESSAGE }, 503, { 'retry-after': '300' });
+  return c.json({ ok: true, database: 'ready' });
 });
 app.get('/openapi.json', (c) => c.json(openApiDocument(publicOrigin(c.env, c.req.url))));
 for (const [path, asset] of Object.entries(DISCOVERY_PATHS)) app.get(path, (c) => serveDiscovery(c.req.raw, c.env, asset));
+app.get('/docs', (c) => serveDiscovery(c.req.raw, c.env, '/docs/'));
+app.get('/docs/*', (c) => serveDiscovery(c.req.raw, c.env, new URL(c.req.url).pathname));
+
+const jsonDoc = (c: { json: (body: object, status?: 200, headers?: Record<string, string>) => Response }, body: object, type = 'application/json; charset=utf-8') =>
+  c.json(body, 200, { 'content-type': type, 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' });
+for (const path of ['/.well-known/mcp/server-card.json', '/.well-known/mcp.json']) app.get(path, (c) => jsonDoc(c, serverCard(mcpServer, publicOrigin(c.env, c.req.url))));
+for (const path of ['/.well-known/agent-card.json', '/.well-known/agent.json']) app.get(path, (c) => jsonDoc(c, agentCard(mcpServer, publicOrigin(c.env, c.req.url))));
+app.get('/.well-known/api-catalog', (c) => jsonDoc(c, apiCatalog(publicOrigin(c.env, c.req.url)), 'application/linkset+json; charset=utf-8; profile="https://www.rfc-editor.org/info/rfc9727"'));
+
+app.all('/mcp', (c) => {
+  const client = c.req.header('cf-connecting-ip') ?? 'unknown';
+  const auth = c.req.header('authorization') ?? '';
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : null;
+  return handleMcpRequest(c.req.raw, mcpServer, { env: c.env, client, bearer }, async () => {
+    const res = await allow(c.env, client, 'read');
+    if (res.ok) return null;
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32000, message: `Rate limit reached. Retry in ${res.retryAfterSec} seconds.` } }), {
+      status: 429,
+      headers: { 'content-type': 'application/json', 'retry-after': String(res.retryAfterSec), 'access-control-allow-origin': '*', 'access-control-expose-headers': 'retry-after' },
+    });
+  });
+});
 
 app.all('/api/papertrade/*', (c) => proxyPapertrade(c.req.raw, c.env, new URL(c.req.url).pathname.replace(/^\/api\/papertrade/, '') || '/'));
 
 app.get('/api/status', async (c) => {
-  const last = await c.env.DB.prepare(`SELECT value, updated_at FROM kv WHERE key = 'lasttick'`).first<{ value: string; updated_at: number }>();
+  const ready = await storageReady(c.env);
+  const last = ready ? await c.env.DB.prepare(`SELECT value, updated_at FROM kv WHERE key = 'lasttick'`).first<{ value: string; updated_at: number }>() : null;
   const channels = channelAvailability(c.env);
   return c.json({
-    version: '0.1.0',
+    version: '0.2.0',
+    ready,
+    notice: ready ? null : UNAVAILABLE_MESSAGE,
     channels,
     telegramBot: c.env.TELEGRAM_BOT_USERNAME ?? null,
     insecureWebhooks: c.env.ALLOW_INSECURE_WEBHOOKS === 'true',
@@ -67,7 +106,7 @@ app.get('/api/status', async (c) => {
   });
 });
 
-app.post('/api/telegram/webhook', bodyLimit({ maxSize: 64 * 1024 }), async (c) => {
+app.post('/api/telegram/webhook', needsStorage, bodyLimit({ maxSize: 64 * 1024 }), async (c) => {
   const secret = c.env.TELEGRAM_WEBHOOK_SECRET;
   if (!c.env.TELEGRAM_BOT_TOKEN || !secret) return c.json({ code: 'telegram_disabled', message: 'Telegram is not configured on this deployment.' }, 503);
   const given = c.req.header('x-telegram-bot-api-secret-token') ?? '';
@@ -78,13 +117,14 @@ app.post('/api/telegram/webhook', bodyLimit({ maxSize: 64 * 1024 }), async (c) =
   return c.json({ ok: true, ...result });
 });
 
-app.post('/api/accounts', async (c) => {
+app.post('/api/accounts', needsStorage, async (c) => {
   const ip = c.req.header('cf-connecting-ip') ?? null;
   const { account, token } = await createAccount(c.env, ip);
   return c.json({ accountId: account.id, token, notice: 'This token is shown once. Anyone holding it can manage this subscription.' }, 201);
 });
 
 const authed = new Hono<{ Bindings: Env; Variables: Vars }>();
+authed.use('*', needsStorage);
 authed.use('*', bodyLimit({ maxSize: 32 * 1024 }));
 authed.use('*', async (c, next) => {
   c.set('account', await authenticate(c.env, c.req.header('authorization')));
@@ -159,39 +199,8 @@ authed.delete('/channels/:id', async (c) => {
 });
 
 authed.post('/channels/:id/test', async (c) => {
-  const account = c.get('account');
-  const channel = await c.env.DB.prepare(`SELECT id, kind, target, secret FROM channels WHERE id = ? AND account_id = ?`)
-    .bind(c.req.param('id'), account.id)
-    .first<{ id: string; kind: ChannelKind; target: string; secret: string | null }>();
-  if (!channel) throw new ApiError(404, 'not_found', 'No such channel.');
-  const availability = channelAvailability(c.env).find((a) => a.kind === channel.kind);
-  if (availability && !availability.enabled) throw new ApiError(503, 'channel_disabled', availability.reason ?? 'This channel is not configured.');
-  const recent = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM alerts WHERE account_id = ? AND type = 'test' AND created_at > ?`).bind(account.id, Date.now() - 60_000).first<{ n: number }>();
-  if ((recent?.n ?? 0) >= 5) throw new ApiError(429, 'too_many_tests', 'Five test messages per minute is the limit. Wait a moment.');
-
-  const now = Date.now();
-  const alertId = newId('alt');
-  const deliveryId = newId('dlv');
-  const rendered: RenderedAlert = {
-    id: alertId,
-    type: 'test',
-    severity: 'info',
-    title: 'Papertrade Alerts test message',
-    body: 'If you can read this, this channel is wired correctly. Real alerts will look like this.',
-    fields: [{ name: 'Channel', value: channel.kind }],
-    createdAt: now,
-    data: { test: true, channelId: channel.id },
-  };
-  await c.env.DB.batch([
-    c.env.DB.prepare(`INSERT INTO alerts (id, account_id, watch_id, type, severity, dedupe_key, title, body, payload, suppressed, created_at) VALUES (?, ?, NULL, 'test', 'info', ?, ?, ?, ?, 0, ?)`)
-      .bind(alertId, account.id, `test:${alertId}`, rendered.title, rendered.body, JSON.stringify({ fields: rendered.fields, url: null, data: rendered.data }), now),
-    c.env.DB.prepare(`INSERT INTO deliveries (id, alert_id, channel_id, account_id, status, attempts, next_attempt_at, created_at) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?)`).bind(deliveryId, alertId, channel.id, account.id, now, now),
-  ]);
-  const result = await sendToChannel(c.env, channel, rendered, deliveryId);
-  // A test is one-shot: a failure goes straight to the dead-letter view where it can be retried after fixing the channel.
-  const outcome = nextState(0, result, Date.now(), 1);
-  await c.env.DB.batch(outcomeStatements(c.env, { id: deliveryId, channel_id: channel.id }, outcome, Date.now()));
-  return c.json({ ok: result.ok, status: result.status ?? null, error: result.error ?? null, deliveryId, alertId }, result.ok ? 200 : 502);
+  const result = await sendTestMessage(c.env, c.get('account').id, c.req.param('id'));
+  return c.json(result, result.ok ? 200 : 502);
 });
 
 authed.post('/telegram/link', async (c) => {

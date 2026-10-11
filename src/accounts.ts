@@ -2,7 +2,8 @@ import { isAddress } from 'viem';
 import { newId, newManagementToken, randomBase64Url, sha256Hex } from './lib/crypto.js';
 import { defaultRulesFor, normalizeWalletRules, parseStoredWalletRules, ValidationError } from './engine/rules.js';
 import type { ChannelKind, Env, WalletRules, WatchRole } from './types.js';
-import { validateTarget } from './channels/index.js';
+import { channelAvailability, sendToChannel, validateTarget, type RenderedAlert } from './channels/index.js';
+import { nextState, outcomeStatements } from './engine/delivery.js';
 
 export const LIMITS = { watchesPerAccount: 25, channelsPerAccount: 6, accountsPerCreatorPerHour: 10 } as const;
 
@@ -196,4 +197,48 @@ export async function newLinkCode(env: Env, accountId: string, now = Date.now())
     env.DB.prepare(`INSERT INTO link_codes (code, account_id, expires_at) VALUES (?, ?, ?)`).bind(code, accountId, expiresAt),
   ]);
   return { code, expiresAt };
+}
+
+export interface TestResult {
+  ok: boolean;
+  status: number | null;
+  error: string | null;
+  deliveryId: string;
+  alertId: string;
+}
+
+/** Send one real test message to one of the account's channels and record it like any other delivery. */
+export async function sendTestMessage(env: Env, accountId: string, channelId: string): Promise<TestResult> {
+  const channel = await env.DB.prepare(`SELECT id, kind, target, secret FROM channels WHERE id = ? AND account_id = ?`)
+    .bind(channelId, accountId)
+    .first<{ id: string; kind: ChannelKind; target: string; secret: string | null }>();
+  if (!channel) throw new ApiError(404, 'not_found', 'No such channel.');
+  const availability = channelAvailability(env).find((a) => a.kind === channel.kind);
+  if (availability && !availability.enabled) throw new ApiError(503, 'channel_disabled', availability.reason ?? 'This channel is not configured.');
+  const recent = await env.DB.prepare(`SELECT COUNT(*) AS n FROM alerts WHERE account_id = ? AND type = 'test' AND created_at > ?`).bind(accountId, Date.now() - 60_000).first<{ n: number }>();
+  if ((recent?.n ?? 0) >= 5) throw new ApiError(429, 'too_many_tests', 'Five test messages per minute is the limit. Wait a moment.');
+
+  const now = Date.now();
+  const alertId = newId('alt');
+  const deliveryId = newId('dlv');
+  const rendered: RenderedAlert = {
+    id: alertId,
+    type: 'test',
+    severity: 'info',
+    title: 'Papertrade Alerts test message',
+    body: 'If you can read this, this channel is wired correctly. Real alerts will look like this.',
+    fields: [{ name: 'Channel', value: channel.kind }],
+    createdAt: now,
+    data: { test: true, channelId: channel.id },
+  };
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO alerts (id, account_id, watch_id, type, severity, dedupe_key, title, body, payload, suppressed, created_at) VALUES (?, ?, NULL, 'test', 'info', ?, ?, ?, ?, 0, ?)`)
+      .bind(alertId, accountId, `test:${alertId}`, rendered.title, rendered.body, JSON.stringify({ fields: rendered.fields, url: null, data: rendered.data }), now),
+    env.DB.prepare(`INSERT INTO deliveries (id, alert_id, channel_id, account_id, status, attempts, next_attempt_at, created_at) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?)`).bind(deliveryId, alertId, channel.id, accountId, now, now),
+  ]);
+  const result = await sendToChannel(env, channel, rendered, deliveryId);
+  // A test is one-shot: a failure goes straight to the dead-letter view where it can be retried after fixing the channel.
+  const outcome = nextState(0, result, Date.now(), 1);
+  await env.DB.batch(outcomeStatements(env, { id: deliveryId, channel_id: channel.id }, outcome, Date.now()));
+  return { ok: result.ok, status: result.status ?? null, error: result.error ?? null, deliveryId, alertId };
 }

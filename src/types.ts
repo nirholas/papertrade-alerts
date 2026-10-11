@@ -1,6 +1,9 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  /** Workers Rate Limiting bindings for the MCP endpoint. Optional: an in-memory window always applies too. */
+  MCP_RL_READ?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  MCP_RL_WRITE?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   PAPERTRADE_API_URL?: string;
   EXPLORER_URL?: string;
   /** Canonical public origin (e.g. a custom domain). Defaults to the origin each request arrives on. */

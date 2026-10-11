@@ -85,11 +85,11 @@ interface WatchRow {
   state: string;
 }
 
-function instrumentMap(trading: TradingState): Record<number, InstrumentInfo> {
+export function instrumentMap(trading: TradingState): Record<number, InstrumentInfo> {
   return Object.fromEntries(trading.instruments.map((i) => [i.id, { id: i.id, symbol: i.symbol, priceScale: Number(i.priceScale) }]));
 }
 
-async function fetchMarks(client: PapertradeClient, trading: TradingState, now: number): Promise<Record<number, bigint>> {
+export async function fetchMarks(client: PapertradeClient, trading: TradingState, now: number): Promise<Record<number, bigint>> {
   const marks: Record<number, bigint> = {};
   await Promise.all(
     trading.instruments

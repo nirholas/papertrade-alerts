@@ -4,12 +4,12 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
-# Static UI. The Worker runs first for API routes, the OpenAPI document, and the discovery
-# files (index, robots, sitemap, security.txt), whose __ORIGIN__ token it fills with the public origin.
+# Static UI. The Worker runs first for the API, /mcp, the OpenAPI document, and the discovery files and
+# docs (index, robots, sitemap, llms, security.txt, /docs), whose __ORIGIN__ token it fills with the public origin.
 [assets]
 directory = "public"
 binding = "ASSETS"
-run_worker_first = ["/api/*", "/openapi.json", "/healthz", "/", "/index.html", "/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]
+run_worker_first = ["/api/*", "/mcp", "/openapi.json", "/healthz", "/", "/index.html", "/robots.txt", "/sitemap.xml", "/llms.txt", "/llms-full.txt", "/docs", "/docs/*", "/.well-known/*"]
 
 # Poll every minute. Local: `wrangler dev --test-scheduled`, then GET /__scheduled.
 [triggers]
@@ -21,6 +21,17 @@ database_name = "papertrade-alerts"
 # Replace with the id printed by `wrangler d1 create papertrade-alerts`. Local dev ignores it.
 database_id = "989666bd-dee1-45eb-8461-4ba68f5f0d0d"
 migrations_dir = "migrations"
+
+# Per-client budgets for /mcp. The Worker also keeps an in-memory window, so these are belt and braces.
+[[ratelimits]]
+name = "MCP_RL_READ"
+namespace_id = "7101"
+simple = { limit = 120, period = 60 }
+
+[[ratelimits]]
+name = "MCP_RL_WRITE"
+namespace_id = "7102"
+simple = { limit = 12, period = 60 }
 
 [vars]
 PAPERTRADE_API_URL = "https://exchange.papertrade.xyz"

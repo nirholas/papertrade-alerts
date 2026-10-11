@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.nirholas/papertrade-alerts",
+  "title": "Papertrade Alerts",
+  "description": "Unofficial. Preview Papertrade wallet liquidation risk and manage alert rules to Discord or signed webhooks. Never moves funds.",
+  "version": "0.2.0",
+  "websiteUrl": "https://papertrade-alerts.ninabrekkerese.workers.dev/docs/",
+  "repository": { "url": "https://github.com/nirholas/papertrade-alerts", "source": "github" },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://papertrade-alerts.ninabrekkerese.workers.dev/mcp",
+      "headers": [
+        { "name": "Authorization", "description": "Optional. Bearer management token (ptal_...) from the create_subscription tool, for the subscription tools.", "isRequired": false, "isSecret": true }
+      ]
+    }
+  ]
+}

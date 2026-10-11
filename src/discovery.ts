@@ -9,6 +9,8 @@ export const DISCOVERY_PATHS: Record<string, string> = {
   '/index.html': '/index.html',
   '/robots.txt': '/robots.txt',
   '/sitemap.xml': '/sitemap.xml',
+  '/llms.txt': '/llms.txt',
+  '/llms-full.txt': '/llms-full.txt',
   '/.well-known/security.txt': '/.well-known/security.txt',
 };
 
