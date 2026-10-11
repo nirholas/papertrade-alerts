@@ -1,6 +1,6 @@
 {
   "name": "papertrade-alerts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Unofficial self-hostable alerting service for Papertrade (papertrade.xyz): a Cloudflare Worker with Cron Triggers and D1 that watches wallets and the protocol and notifies Telegram, Discord and signed webhooks.",
   "license": "Apache-2.0",
@@ -12,12 +12,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p ui",
     "test": "vitest run",
-    "build:site": "esbuild ui/app.ts --bundle --format=esm --minify --target=es2022 --sourcemap --outfile=public/app.js",
+    "build:site": "npm run build:docs && npm run build:ui",
     "dev:site": "npm run build:site && wrangler d1 migrations apply papertrade-alerts --local && wrangler dev --port 8796 --test-scheduled",
     "deploy:site": "npm run build:site && wrangler d1 migrations apply papertrade-alerts --remote && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply papertrade-alerts --local",
     "db:migrate:remote": "wrangler d1 migrations apply papertrade-alerts --remote",
-    "telegram:webhook": "node scripts/set-telegram-webhook.mjs"
+    "telegram:webhook": "node scripts/set-telegram-webhook.mjs",
+    "build:ui": "esbuild ui/app.ts --bundle --format=esm --minify --target=es2022 --sourcemap --outfile=public/app.js",
+    "build:docs": "node scripts/build-docs.mjs"
   },
   "keywords": [
     "papertrade",
@@ -42,13 +44,18 @@
     "typescript",
     "crypto",
     "web3",
-    "notifications"
+    "notifications",
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "ai-agents",
+    "llms-txt"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nirholas/papertrade-alerts.git"
   },
-  "homepage": "https://github.com/nirholas/papertrade-alerts#readme",
+  "homepage": "https://papertrade-alerts.ninabrekkerese.workers.dev",
   "bugs": {
     "url": "https://github.com/nirholas/papertrade-alerts/issues"
   },
@@ -68,5 +75,6 @@
   "allowScripts": {
     "workerd@1.20261006.1": true,
     "esbuild@0.28.2": true
-  }
+  },
+  "mcpName": "io.github.nirholas/papertrade-alerts"
 }

@@ -5,9 +5,11 @@
 [![HyperEVM](https://img.shields.io/badge/HyperEVM-chain_999-0a8f5b?style=flat-square)](https://papertrade.xyz)
 [![GitHub stars](https://img.shields.io/github/stars/nirholas/papertrade-alerts?style=flat-square&color=0a8f5b)](https://github.com/nirholas/papertrade-alerts/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/nirholas/papertrade-alerts?style=flat-square&color=0a8f5b)](https://github.com/nirholas/papertrade-alerts/commits/main)
+[![MCP](https://img.shields.io/badge/MCP-streamable_http-0a8f5b?style=flat-square)](https://papertrade-alerts.ninabrekkerese.workers.dev/docs/mcp)
+[![Live](https://img.shields.io/badge/live-workers.dev-0a8f5b?style=flat-square)](https://papertrade-alerts.ninabrekkerese.workers.dev)
 [![Unofficial](https://img.shields.io/badge/community-unofficial-lightgrey?style=flat-square)](#the-papertrade-toolkit)
 
-[Issues](https://github.com/nirholas/papertrade-alerts/issues) · [Discussions](https://github.com/nirholas/papertrade-alerts/discussions) · [Papertrade](https://papertrade.xyz) · [Toolkit](#the-papertrade-toolkit)
+[Live app](https://papertrade-alerts.ninabrekkerese.workers.dev) · [Docs](https://papertrade-alerts.ninabrekkerese.workers.dev/docs/) · [Issues](https://github.com/nirholas/papertrade-alerts/issues) · [Discussions](https://github.com/nirholas/papertrade-alerts/discussions) · [Papertrade](https://papertrade.xyz) · [Toolkit](#the-papertrade-toolkit)
 
 Unofficial, self-hostable alerts for [Papertrade](https://papertrade.xyz) wallets. Know before the liquidation: get a Telegram, Discord or signed-webhook message when a position nears its bust price, opens, closes, is liquidated, when a session key is about to expire, or when staking rewards pile up.
 
@@ -28,6 +30,28 @@ curl localhost:8796/cdn-cgi/handler/scheduled
 ```
 
 Open http://localhost:8796, press "Create my subscription", save the token, add a wallet and a channel, then "Send test".
+
+## MCP server and AI connectors
+
+The Worker hosts a stateless MCP server (Streamable HTTP) at `/mcp`: `https://papertrade-alerts.ninabrekkerese.workers.dev/mcp`. Ten tools: `get_service_status`, `list_alert_types`, `preview_wallet_alerts` (live read of any wallet, no account needed), `validate_destination`, `create_subscription`, `add_destination`, `test_destination`, `create_alert_rule`, `list_alert_rules`, `delete_alert_rule`. No tool signs, sends funds or places orders. Destinations are SSRF-guarded (https only, public hosts only), writes are rate limited per client and secrets are never logged.
+
+```bash
+claude mcp add --transport http papertrade-alerts https://papertrade-alerts.ninabrekkerese.workers.dev/mcp
+codex mcp add papertrade-alerts --url https://papertrade-alerts.ninabrekkerese.workers.dev/mcp
+gemini mcp add --transport http papertrade-alerts https://papertrade-alerts.ninabrekkerese.workers.dev/mcp
+```
+
+Cursor, VS Code, Windsurf, Zed, Cline, Goose, Continue, Claude Desktop, claude.ai, ChatGPT and the Claude and OpenAI APIs: see [Connect your AI](docs/connect.md).
+
+Discovery: `/.well-known/mcp/server-card.json`, `/.well-known/agent-card.json`, `/.well-known/api-catalog`, `/openapi.json`, `/llms.txt`, `/llms-full.txt`. Registry metadata: `server.json`.
+
+## Documentation
+
+Markdown sources live in `docs/` and are rendered by `npm run build:docs` (part of `build:site`) to `/docs/` with search, a `.md` twin per page, `llms.txt` and `llms-full.txt`.
+
+## Embedding
+
+`/?embed=1` hides the marketing sections and shows only the product. The home page allows framing by `https://papertrade-os.pages.dev` and other `*.pages.dev` origins. "Open in Papertrade OS" links to `https://papertrade-os.pages.dev/?open=alerts`.
 
 ## Features
 
