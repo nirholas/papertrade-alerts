@@ -25,6 +25,15 @@ export function fillOrigin(body: string, origin: string): string {
   return body.split(ORIGIN_TOKEN).join(origin);
 }
 
+/** Origins allowed to frame the product page: itself and the Papertrade OS desktop (any Pages host). */
+export const FRAME_ANCESTORS = "frame-ancestors 'self' https://papertrade-os.pages.dev https://*.pages.dev";
+
+/** Static `_headers` cannot subtract an inherited CSP reliably, so the framable page's CSP is set here. */
+export function framableCsp(csp: string | null): string {
+  const base = (csp ?? "default-src 'self'").split(',')[0];
+  return base.replace(/frame-ancestors[^;]*/i, FRAME_ANCESTORS);
+}
+
 export async function serveDiscovery(request: Request, env: Env, assetPath: string): Promise<Response> {
   const asset = await env.ASSETS.fetch(new URL(assetPath, request.url));
   if (!asset.ok) return asset;
@@ -32,5 +41,6 @@ export async function serveDiscovery(request: Request, env: Env, assetPath: stri
   headers.delete('content-length');
   headers.delete('etag');
   headers.set('cache-control', 'public, max-age=300');
+  if (assetPath === '/index.html') headers.set('content-security-policy', framableCsp(headers.get('content-security-policy')));
   return new Response(fillOrigin(await asset.text(), publicOrigin(env, request.url)), { status: 200, headers });
 }

@@ -5,8 +5,6 @@
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
 
 /
-  ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'self' https://papertrade-os.pages.dev https://*.pages.dev; form-action 'self'
   Link: </openapi.json>; rel="service-desc"; type="application/openapi+json", </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </mcp>; rel="mcp", </llms.txt>; rel="describedby"; type="text/plain"
 
 /app.js

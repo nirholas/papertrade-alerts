@@ -41,3 +41,17 @@ describe('generated docs', () => {
     expect(index.every((p) => p.text.length > 50)).toBe(true);
   });
 });
+
+describe('framable landing page', () => {
+  it('replaces frame-ancestors none with the OS allow list on the landing page only', async () => {
+    const csp = "default-src 'self'; frame-ancestors 'none'; form-action 'self'";
+    const env = { ASSETS: { fetch: async () => new Response('<html>__ORIGIN__</html>', { headers: { 'content-security-policy': csp } }) } } as unknown as Env;
+    const res = await serveDiscovery(new Request('https://a.example/'), env, '/index.html');
+    const out = res.headers.get('content-security-policy') ?? '';
+    expect(out).toContain("frame-ancestors 'self' https://papertrade-os.pages.dev https://*.pages.dev");
+    expect(out).not.toContain("'none'");
+    expect(out.split(',')).toHaveLength(1);
+    const docs = await serveDiscovery(new Request('https://a.example/docs/'), env, '/docs/');
+    expect(docs.headers.get('content-security-policy')).toBe(csp);
+  });
+});
