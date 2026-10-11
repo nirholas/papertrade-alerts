@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ - Papertrade Alerts docs</title>
+<meta name="description" content="Common questions about alerts, tokens, delivery and the MCP server.">
+<link rel="canonical" href="__ORIGIN__/docs/faq">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/faq.md">
+<meta property="og:title" content="FAQ - Papertrade Alerts docs">
+<meta property="og:description" content="Common questions about alerts, tokens, delivery and the MCP server.">
+<meta property="og:url" content="__ORIGIN__/docs/faq">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq" aria-current="page">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="faq">FAQ</h1>
+<p><strong>Is this official?</strong> No. It is an unofficial community tool, not affiliated with Papertrade.</p>
+<p><strong>Can it trade for me or protect my position?</strong> No. It only reads and notifies. Alerts are best effort and can be late or missed.</p>
+<p><strong>I lost my token.</strong> It cannot be recovered. Create a new subscription and re-add your wallets.</p>
+<p><strong>Why did I not get an alert for a position that already existed?</strong> A new watch is seeded silently. Only changes after the first poll alert.</p>
+<p><strong>Why one alert and not one per minute?</strong> Thresholds are edge-triggered with hysteresis. See <a href="/docs/concepts">Concepts</a>.</p>
+<p><strong>How fast are alerts?</strong> The cron polls every minute and each wallet is polled when due, so expect roughly a minute plus delivery time.</p>
+<p><strong>The API says service_initializing or 503.</strong> The deployment's D1 schema has not been applied or its daily D1 quota is used up. It recovers on its own after the fix or at midnight UTC.</p>
+<p><strong>Can an agent read a wallet without an account?</strong> Yes: <code>preview_wallet_alerts</code> needs no token.</p>
+<p><strong>Can an agent send a message to an arbitrary URL?</strong> Only to a destination the caller registered and that passes the SSRF guard, at most 5 test messages a minute.</p>
+<p><strong>Which chains?</strong> Papertrade runs on HyperEVM (chain 999). Addresses are standard 0x addresses.</p>
+<div class="pager"><a class="prev" href="/docs/security"><span>Previous</span>Security and limits</a><a class="next" href="/docs/changelog"><span>Next</span>Changelog</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/faq.md">/docs/faq.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"></aside>
+</div>
+</body>
+</html>

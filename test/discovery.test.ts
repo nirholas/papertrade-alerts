@@ -28,3 +28,16 @@ describe('discovery files', () => {
     expect(body).not.toContain(ORIGIN_TOKEN);
   });
 });
+
+describe('generated docs', () => {
+  it('emit origin tokens, no hardcoded host, md twins and a search index', () => {
+    for (const f of ['public/llms.txt', 'public/llms-full.txt', 'public/docs/index.html', 'public/docs/mcp.html', 'public/docs/mcp.md', 'public/sitemap.xml']) {
+      const body = readFileSync(f, 'utf8');
+      expect(body, f).toContain(ORIGIN_TOKEN);
+      expect(body, f).not.toMatch(/ninabrekkerese/);
+    }
+    const index = JSON.parse(readFileSync('public/docs/search-index.json', 'utf8')) as Array<{ title: string; url: string; text: string }>;
+    expect(index.length).toBeGreaterThanOrEqual(11);
+    expect(index.every((p) => p.text.length > 50)).toBe(true);
+  });
+});

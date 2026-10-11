@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog - Papertrade Alerts docs</title>
+<meta name="description" content="Release notes.">
+<link rel="canonical" href="__ORIGIN__/docs/changelog">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/changelog.md">
+<meta property="og:title" content="Changelog - Papertrade Alerts docs">
+<meta property="og:description" content="Release notes.">
+<meta property="og:url" content="__ORIGIN__/docs/changelog">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog" aria-current="page">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="changelog">Changelog</h1>
+<h2 id="0-2-0">0.2.0<a class="anchor" href="#0-2-0" aria-label="Link to 0.2.0">#</a></h2>
+<ul><li>MCP server at <code>/mcp</code> with ten tools (preview, subscription, destinations, rules).</li><li>Agent discovery: MCP server card, A2A agent card, RFC 9727 API catalog, llms-full.txt.</li><li>Documentation site at <code>/docs/</code> with search and markdown twins.</li><li>Honest degradation: <code>503 service_initializing</code> and a quiet cron while D1 is not ready.</li><li>Stricter SSRF guard (CGNAT, benchmark, multicast, reserved ranges, internal suffixes).</li><li>Embeddable in Papertrade OS via <code>?embed=1</code>.</li></ul>
+<h2 id="0-1-0">0.1.0<a class="anchor" href="#0-1-0" aria-label="Link to 0.1.0">#</a></h2>
+<ul><li>Initial release: wallet and protocol alerts to Telegram, Discord and signed webhooks, web app, HTTP API.</li></ul>
+<div class="pager"><a class="prev" href="/docs/faq"><span>Previous</span>FAQ</a><span></span></div>
+<p class="mute foot">Raw markdown: <a href="/docs/changelog.md">/docs/changelog.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#0-2-0">0.2.0</a><a href="#0-1-0">0.1.0</a></aside>
+</div>
+</body>
+</html>

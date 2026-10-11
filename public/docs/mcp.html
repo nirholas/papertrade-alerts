@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP server - Papertrade Alerts docs</title>
+<meta name="description" content="The /mcp endpoint, its ten tools with schemas, authentication, limits and examples.">
+<link rel="canonical" href="__ORIGIN__/docs/mcp">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/mcp.md">
+<meta property="og:title" content="MCP server - Papertrade Alerts docs">
+<meta property="og:description" content="The /mcp endpoint, its ten tools with schemas, authentication, limits and examples.">
+<meta property="og:url" content="__ORIGIN__/docs/mcp">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp" aria-current="page">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="mcp-server">MCP server</h1>
+<p>Endpoint: <code>__ORIGIN__/mcp</code></p>
+<p>Transport: MCP Streamable HTTP, stateless. <code>POST</code> JSON-RPC 2.0 (single message or batch). Protocol versions <code>2025-06-18</code>, <code>2025-03-26</code> and <code>2024-11-05</code> are accepted. The reply is <code>application/json</code>, or one SSE <code>message</code> event when a client accepts only <code>text/event-stream</code>. <code>GET</code> with <code>Accept: text/event-stream</code> and <code>DELETE</code> answer <code>405</code>. There are no sessions, cookies or OAuth: <code>Origin</code> is never used for authorization.</p>
+<blockquote><p>No tool signs, sends funds or places orders. Tools that touch the account only manage alert rules and notification destinations, and only for the caller's own subscription.</p></blockquote>
+<h2 id="authentication">Authentication<a class="anchor" href="#authentication" aria-label="Link to Authentication">#</a></h2>
+<p>Discovery and preview tools need nothing. Subscription tools need the management token from <code>create_subscription</code>, either as the <code>Authorization: Bearer ptal_...</code> header (preferred, configure it once in your client) or as the <code>token</code> argument.</p>
+<h2 id="tools">Tools<a class="anchor" href="#tools" aria-label="Link to Tools">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Tool</th><th>Reads or writes</th><th>What it does</th></tr></thead><tbody><tr><td><code>get_service_status</code></td><td>read</td><td>Storage state, configured channels, limits, last cron poll</td></tr><tr><td><code>list_alert_types</code></td><td>read</td><td>Every alert, its rule field, defaults and ranges</td></tr><tr><td><code>preview_wallet_alerts</code></td><td>read (live API)</td><td>Which alerts a wallet would trigger right now: distance to liquidation per position, session key expiry, pending rewards</td></tr><tr><td><code>validate_destination</code></td><td>read</td><td>SSRF-guard check of a Discord or webhook URL. No network request</td></tr><tr><td><code>create_subscription</code></td><td>write</td><td>New subscription, token returned once</td></tr><tr><td><code>add_destination</code></td><td>write</td><td>Connect a Discord webhook or https webhook you own. Signing secret returned once</td></tr><tr><td><code>test_destination</code></td><td>write</td><td>Deliver one real test message. 5 per minute</td></tr><tr><td><code>create_alert_rule</code></td><td>write</td><td>Watch a wallet with rules. Idempotent</td></tr><tr><td><code>list_alert_rules</code></td><td>read</td><td>Rules and destinations with health</td></tr><tr><td><code>delete_alert_rule</code></td><td>write, destructive</td><td>Stop watching one wallet</td></tr></tbody></table></div>
+<p>Every tool declares <code>inputSchema</code>, <code>outputSchema</code> and <code>annotations</code>. Results carry a text block and <code>structuredContent</code>. Tool failures use <code>isError: true</code> with a message that says how to recover; malformed calls use JSON-RPC errors (<code>-32700</code>, <code>-32600</code>, <code>-32601</code>, <code>-32602</code>).</p>
+<h3 id="preview-wallet-alerts">preview_wallet_alerts<a class="anchor" href="#preview-wallet-alerts" aria-label="Link to preview_wallet_alerts">#</a></h3>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{ &quot;address&quot;: &quot;0x...&quot;, &quot;rules&quot;: { &quot;liquidation&quot;: { &quot;belowPct&quot;: 5 } } }</code></pre></div>
+<p>Returns <code>positions[]</code> (market, side, leverage, marginUsd, entryPrice, markPrice, bustPrice, <code>distanceToLiquidationPct</code>, <code>wouldAlert</code>), <code>sessionKeys[]</code>, <code>pendingRewardsUsdc</code>, <code>equityUsd</code> and the rules applied. Nothing is stored.</p>
+<h3 id="add-destination">add_destination<a class="anchor" href="#add-destination" aria-label="Link to add_destination">#</a></h3>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{ &quot;kind&quot;: &quot;webhook&quot;, &quot;url&quot;: &quot;https://example.com/hooks/papertrade&quot;, &quot;label&quot;: &quot;ops&quot; }</code></pre></div>
+<p>Refused: <code>http:</code>, URLs with credentials, <code>localhost</code>, private, loopback, link-local, CGNAT and reserved addresses, and internal-only names.</p>
+<h2 id="raw-examples">Raw examples<a class="anchor" href="#raw-examples" aria-label="Link to Raw examples">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">URL=__ORIGIN__/mcp
+H='content-type: application/json'
+
+curl -s $URL -H &quot;$H&quot; -H 'accept: application/json, text/event-stream' \
+  -d '{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;method&quot;:&quot;initialize&quot;,&quot;params&quot;:{&quot;protocolVersion&quot;:&quot;2025-06-18&quot;,&quot;capabilities&quot;:{},&quot;clientInfo&quot;:{&quot;name&quot;:&quot;curl&quot;,&quot;version&quot;:&quot;1&quot;}}}'
+
+curl -s $URL -H &quot;$H&quot; -d '{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:2,&quot;method&quot;:&quot;tools/list&quot;}'
+
+curl -s $URL -H &quot;$H&quot; -d '{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:3,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;get_service_status&quot;,&quot;arguments&quot;:{}}}'</code></pre></div>
+<h2 id="limits">Limits<a class="anchor" href="#limits" aria-label="Link to Limits">#</a></h2>
+<p>Per client IP: 120 requests per minute overall, 12 writes per minute, 8 wallet previews per minute. Request bodies are capped at 64 KB and batches at 16 messages. Over the limit you get <code>429</code> with <code>Retry-After</code>. Account limits apply on top: 25 wallets, 6 channels, 60 alerts per hour. While storage is not ready, account tools return a clear error and discovery tools keep working. See <a href="/docs/security">Security and limits</a>.</p>
+<div class="pager"><a class="prev" href="/docs/api"><span>Previous</span>API reference</a><a class="next" href="/docs/connect"><span>Next</span>Connect your AI</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/mcp.md">/docs/mcp.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#authentication">Authentication</a><a href="#tools">Tools</a><a href="#raw-examples">Raw examples</a><a href="#limits">Limits</a></aside>
+</div>
+</body>
+</html>

@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>__ORIGIN__/</loc><lastmod>2026-10-10</lastmod></url>
-  <url><loc>__ORIGIN__/llms.txt</loc><lastmod>2026-10-10</lastmod></url>
-  <url><loc>__ORIGIN__/openapi.json</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>__ORIGIN__/</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/quickstart</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/concepts</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/api</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/mcp</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/connect</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/discovery</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/self-hosting</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/security</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/faq</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/docs/changelog</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/llms.txt</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/llms-full.txt</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/openapi.json</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/.well-known/mcp/server-card.json</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>__ORIGIN__/.well-known/agent-card.json</loc><lastmod>2026-10-11</lastmod></url>
 </urlset>

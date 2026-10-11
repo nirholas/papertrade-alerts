@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect your AI - Papertrade Alerts docs</title>
+<meta name="description" content="Copy-paste setup for Claude, Codex, ChatGPT, Gemini, Cursor, VS Code, Windsurf, Zed, Cline, Goose, Continue and any OpenAI-compatible agent.">
+<link rel="canonical" href="__ORIGIN__/docs/connect">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/connect.md">
+<meta property="og:title" content="Connect your AI - Papertrade Alerts docs">
+<meta property="og:description" content="Copy-paste setup for Claude, Codex, ChatGPT, Gemini, Cursor, VS Code, Windsurf, Zed, Cline, Goose, Continue and any OpenAI-compatible agent.">
+<meta property="og:url" content="__ORIGIN__/docs/connect">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect" aria-current="page">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="connect-your-ai">Connect your AI</h1>
+<p>Server URL: <code>__ORIGIN__/mcp</code>. Streamable HTTP, no OAuth. Preview tools work with no credentials. For subscription tools, add the management token from <code>create_subscription</code> as an <code>Authorization: Bearer ptal_...</code> header where the client supports headers (examples below use <code>$ALERTS_TOKEN</code>), or just let the agent pass it as the <code>token</code> argument.</p>
+<p>Client config formats change; each snippet follows the vendor documentation at the time of writing.</p>
+<h2 id="claude-code">Claude Code<a class="anchor" href="#claude-code" aria-label="Link to Claude Code">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">claude mcp add --transport http papertrade-alerts __ORIGIN__/mcp
+# with a token
+claude mcp add --transport http papertrade-alerts __ORIGIN__/mcp --header &quot;Authorization: Bearer $ALERTS_TOKEN&quot;</code></pre></div>
+<h2 id="claude-desktop-and-claude-ai">Claude Desktop and claude.ai<a class="anchor" href="#claude-desktop-and-claude-ai" aria-label="Link to Claude Desktop and claude.ai">#</a></h2>
+<p>Settings, Connectors, <strong>Add custom connector</strong>, paste the server URL. For Claude Desktop you can also use the <code>mcp-remote</code> bridge in <code>claude_desktop_config.json</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;papertrade-alerts&quot;: {
+      &quot;command&quot;: &quot;npx&quot;,
+      &quot;args&quot;: [&quot;-y&quot;, &quot;mcp-remote&quot;, &quot;__ORIGIN__/mcp&quot;]
+    }
+  }
+}</code></pre></div>
+<h2 id="claude-api-mcp-connector">Claude API (MCP connector)<a class="anchor" href="#claude-api-mcp-connector" aria-label="Link to Claude API (MCP connector)">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">curl https://api.anthropic.com/v1/messages \
+  -H &quot;content-type: application/json&quot; \
+  -H &quot;x-api-key: $ANTHROPIC_API_KEY&quot; \
+  -H &quot;anthropic-version: 2023-06-01&quot; \
+  -H &quot;anthropic-beta: mcp-client-2025-11-20&quot; \
+  -d '{
+    &quot;model&quot;: &quot;claude-sonnet-4-5&quot;,
+    &quot;max_tokens&quot;: 1000,
+    &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Preview the alerts for 0x...&quot;}],
+    &quot;mcp_servers&quot;: [{&quot;type&quot;: &quot;url&quot;, &quot;url&quot;: &quot;__ORIGIN__/mcp&quot;, &quot;name&quot;: &quot;papertrade-alerts&quot;}],
+    &quot;tools&quot;: [{&quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;papertrade-alerts&quot;}]
+  }'</code></pre></div>
+<p>Set <code>authorization_token</code> on the server entry to send the management token. Use any current Claude model id.</p>
+<h2 id="openai-codex-cli">OpenAI Codex CLI<a class="anchor" href="#openai-codex-cli" aria-label="Link to OpenAI Codex CLI">#</a></h2>
+<p><code>~/.codex/config.toml</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-toml">[mcp_servers.papertrade-alerts]
+url = &quot;__ORIGIN__/mcp&quot;
+# optional: name of an environment variable holding the management token
+bearer_token_env_var = &quot;ALERTS_TOKEN&quot;</code></pre></div>
+<p>Or: <code>codex mcp add papertrade-alerts --url __ORIGIN__/mcp</code></p>
+<h2 id="openai-responses-api">OpenAI Responses API<a class="anchor" href="#openai-responses-api" aria-label="Link to OpenAI Responses API">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;model&quot;: &quot;gpt-5&quot;,
+  &quot;input&quot;: &quot;Preview the alerts for 0x...&quot;,
+  &quot;tools&quot;: [{
+    &quot;type&quot;: &quot;mcp&quot;,
+    &quot;server_label&quot;: &quot;papertrade_alerts&quot;,
+    &quot;server_description&quot;: &quot;Wallet alerts for Papertrade. Read-only, never moves funds.&quot;,
+    &quot;server_url&quot;: &quot;__ORIGIN__/mcp&quot;,
+    &quot;require_approval&quot;: &quot;never&quot;
+  }]
+}</code></pre></div>
+<p>Use <code>&quot;require_approval&quot;: &quot;always&quot;</code> if you want to confirm each call; the write tools change your alert subscription.</p>
+<h2 id="chatgpt">ChatGPT<a class="anchor" href="#chatgpt" aria-label="Link to ChatGPT">#</a></h2>
+<p>Settings, Connectors, Advanced, enable <strong>Developer mode</strong>, then create a connector with the server URL and authentication set to none. Availability depends on your plan.</p>
+<h2 id="gemini-cli">Gemini CLI<a class="anchor" href="#gemini-cli" aria-label="Link to Gemini CLI">#</a></h2>
+<p><code>~/.gemini/settings.json</code> (or <code>.gemini/settings.json</code> in a project):</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;papertrade-alerts&quot;: {
+      &quot;httpUrl&quot;: &quot;__ORIGIN__/mcp&quot;,
+      &quot;headers&quot;: { &quot;Authorization&quot;: &quot;Bearer ptal_your_token&quot; }
+    }
+  }
+}</code></pre></div>
+<p>Or: <code>gemini mcp add --transport http papertrade-alerts __ORIGIN__/mcp</code></p>
+<h2 id="cursor">Cursor<a class="anchor" href="#cursor" aria-label="Link to Cursor">#</a></h2>
+<p><code>.cursor/mcp.json</code> (project) or <code>~/.cursor/mcp.json</code> (global):</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;papertrade-alerts&quot;: { &quot;url&quot;: &quot;__ORIGIN__/mcp&quot; }
+  }
+}</code></pre></div>
+<h2 id="vs-code">VS Code<a class="anchor" href="#vs-code" aria-label="Link to VS Code">#</a></h2>
+<p><code>.vscode/mcp.json</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;servers&quot;: {
+    &quot;papertrade-alerts&quot;: { &quot;type&quot;: &quot;http&quot;, &quot;url&quot;: &quot;__ORIGIN__/mcp&quot; }
+  }
+}</code></pre></div>
+<h2 id="windsurf">Windsurf<a class="anchor" href="#windsurf" aria-label="Link to Windsurf">#</a></h2>
+<p><code>~/.codeium/windsurf/mcp_config.json</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;papertrade-alerts&quot;: { &quot;serverUrl&quot;: &quot;__ORIGIN__/mcp&quot; }
+  }
+}</code></pre></div>
+<h2 id="zed">Zed<a class="anchor" href="#zed" aria-label="Link to Zed">#</a></h2>
+<p><code>settings.json</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;context_servers&quot;: {
+    &quot;papertrade-alerts&quot;: { &quot;url&quot;: &quot;__ORIGIN__/mcp&quot; }
+  }
+}</code></pre></div>
+<h2 id="cline">Cline<a class="anchor" href="#cline" aria-label="Link to Cline">#</a></h2>
+<p><code>cline_mcp_settings.json</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;papertrade-alerts&quot;: { &quot;url&quot;: &quot;__ORIGIN__/mcp&quot;, &quot;type&quot;: &quot;streamableHttp&quot; }
+  }
+}</code></pre></div>
+<h2 id="goose">Goose<a class="anchor" href="#goose" aria-label="Link to Goose">#</a></h2>
+<p>Run <code>goose configure</code>, choose <strong>Add Extension</strong>, then <strong>Remote Extension (Streaming HTTP)</strong>, and enter the server URL. Or in <code>~/.config/goose/config.yaml</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-yaml">extensions:
+  papertrade-alerts:
+    type: streamable_http
+    name: papertrade-alerts
+    uri: __ORIGIN__/mcp
+    enabled: true
+    timeout: 300</code></pre></div>
+<h2 id="continue">Continue<a class="anchor" href="#continue" aria-label="Link to Continue">#</a></h2>
+<p><code>.continue/mcpServers/papertrade-alerts.yaml</code>:</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-yaml">name: Papertrade Alerts
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: papertrade-alerts
+    type: streamable-http
+    url: __ORIGIN__/mcp</code></pre></div>
+<h2 id="any-other-agent-framework">Any other agent framework<a class="anchor" href="#any-other-agent-framework" aria-label="Link to Any other agent framework">#</a></h2>
+<p>Frameworks without MCP support can use the HTTP API through the OpenAPI document at <a href="/openapi.json">/openapi.json</a>, which describes every endpoint, or fetch <a href="/llms-full.txt">/llms-full.txt</a> for the full documentation in one file.</p>
+<h2 id="verify">Verify<a class="anchor" href="#verify" aria-label="Link to Verify">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">npx @modelcontextprotocol/inspector --cli __ORIGIN__/mcp --transport http --method tools/list</code></pre></div>
+<div class="pager"><a class="prev" href="/docs/mcp"><span>Previous</span>MCP server</a><a class="next" href="/docs/discovery"><span>Next</span>Agent discovery</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/connect.md">/docs/connect.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#claude-code">Claude Code</a><a href="#claude-desktop-and-claude-ai">Claude Desktop and claude.ai</a><a href="#claude-api-mcp-connector">Claude API (MCP connector)</a><a href="#openai-codex-cli">OpenAI Codex CLI</a><a href="#openai-responses-api">OpenAI Responses API</a><a href="#chatgpt">ChatGPT</a><a href="#gemini-cli">Gemini CLI</a><a href="#cursor">Cursor</a><a href="#vs-code">VS Code</a><a href="#windsurf">Windsurf</a><a href="#zed">Zed</a><a href="#cline">Cline</a><a href="#goose">Goose</a><a href="#continue">Continue</a><a href="#any-other-agent-framework">Any other agent framework</a><a href="#verify">Verify</a></aside>
+</div>
+</body>
+</html>

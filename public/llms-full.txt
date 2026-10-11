@@ -1,0 +1,587 @@
+# Papertrade Alerts
+
+> Unofficial, self-hostable alerting service for Papertrade (papertrade.xyz) wallets on Cloudflare Workers + D1, with an MCP server for AI agents. Not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort. Nothing here signs, sends funds or places orders.
+
+Complete documentation, one page after another.
+
+
+<!-- __ORIGIN__/docs/index.md -->
+# Papertrade Alerts
+
+Papertrade Alerts watches [Papertrade](https://papertrade.xyz) wallets and the protocol, and tells you when something needs attention: a position nearing its bust price, a position opening, closing or being liquidated, a session key about to lapse, staking rewards piling up, a market pausing. Messages go to Telegram, Discord or your own HMAC-signed webhook.
+
+> Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort and can be late or missed: never rely on them to protect funds.
+
+## What runs where
+
+One Cloudflare Worker does everything:
+
+| Piece | What it does |
+| --- | --- |
+| Cron Trigger (every minute) | Polls due wallets from the public Papertrade API, diffs each against its last snapshot, records alerts, flushes the delivery queue. |
+| D1 database | Accounts, watches, channels, alert history, delivery queue and per-wallet state. |
+| HTTP API (`/api/*`) | Create a subscription, manage wallets and channels, read alert history. See the [API reference](__ORIGIN__/docs/api.md). |
+| Management UI (`/`) | The same API as a web app. The token lives in your browser only. |
+| MCP server (`/mcp`) | The same capabilities for AI agents, plus a read-only wallet preview. See [MCP](__ORIGIN__/docs/mcp.md). |
+
+## Read-only by design
+
+The service reads public Papertrade state. It never holds a private key, never signs, never sends funds and never places orders. Its tools cannot move money.
+
+## Where to go next
+
+- [Quickstart](__ORIGIN__/docs/quickstart.md): a working alert in five minutes.
+- [Connect your AI](__ORIGIN__/docs/connect.md): add the MCP server to Claude, Codex, ChatGPT, Gemini, Cursor and more.
+- [Concepts](__ORIGIN__/docs/concepts.md): how thresholds, seeding and delivery behave.
+
+
+<!-- __ORIGIN__/docs/quickstart.md -->
+# Quickstart
+
+You need a wallet address to watch and somewhere to receive messages (a Discord webhook URL or an https endpoint you control).
+
+## With the web app
+
+1. Open the app, press **Create my subscription** and copy the management token. It is shown once.
+2. Under **Channels**, paste a Discord webhook URL or webhook endpoint and press **Send test**.
+3. Under **Wallets**, add the address and adjust thresholds.
+
+## With curl
+
+```bash
+BASE=__ORIGIN__
+
+# 1. Create a subscription. The token is returned once.
+TOKEN=$(curl -s -X POST $BASE/api/accounts | jq -r .token)
+
+# 2. Add a destination you own.
+curl -s -X POST $BASE/api/channels \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"kind":"discord","target":"https://discord.com/api/webhooks/<id>/<token>"}'
+
+# 3. Watch a wallet. Liquidation distance below 3 percent, plus opens and closes.
+curl -s -X POST $BASE/api/watches \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"address":"0x0000000000000000000000000000000000000000","rules":{"liquidation":{"enabled":true,"belowPct":3}}}'
+```
+
+Replace the zero address with the wallet you want to watch.
+
+## With an AI agent
+
+Add the MCP server (see [Connect your AI](__ORIGIN__/docs/connect.md)) and ask: "Preview what alerts 0x... would trigger, then set up a Discord alert for it." The agent calls `preview_wallet_alerts`, `create_subscription`, `add_destination`, `test_destination` and `create_alert_rule`.
+
+## What happens next
+
+The first poll of a new watch is seeded silently, so existing positions are not announced. From the second poll on, changes become alerts. See [Concepts](__ORIGIN__/docs/concepts.md).
+
+
+<!-- __ORIGIN__/docs/concepts.md -->
+# Concepts
+
+## Subscription and token
+
+A subscription is an account with no email or password. Creating one returns a management token that starts with `ptal_`. Only its SHA-256 hash is stored, so a lost token cannot be recovered. Send it as `Authorization: Bearer ptal_...`.
+
+## Watches and roles
+
+A watch is one wallet address plus rules. The role decides what it reports:
+
+- `own`: your wallet. Account-level alerts (liquidation distance, balance change, session keys, rewards) plus trade events.
+- `follow`: someone else's wallet, for example from the leaderboard. Trade events only.
+
+## Alert types
+
+| Type | Fires when | Default |
+| --- | --- | --- |
+| `liquidation_distance` | Mark price is closer than `belowPct` percent to a position's bust price | on, 0.05% |
+| `position_opened` / `follow_opened` | A new position appears | on |
+| `position_closed` | A position closes, with net PnL and PAPER minted | on |
+| `position_liquidated` | A position is liquidated | on |
+| `balance_change` | Equity moved by more than `changeUsd` | off |
+| `session_key_expiring` | A session key expires within `withinDays` | on, 3 days |
+| `staking_rewards` | Pending staking rewards reach `aboveUsdc` | off |
+| `mint_rate`, `market_status` | Protocol level: PAPER mint rate threshold, market paused or close-only | market status on |
+
+## Edge-triggered, not level-triggered
+
+A threshold alert fires when a value crosses its threshold and re-arms only after it recovers (liquidation distance re-arms at 1.5 times the threshold). A wallet that sits below a threshold for an hour produces one alert, not sixty. Trade events carry a per-position dedupe key, so a retried poll can never send twice.
+
+## Silent seeding
+
+A new watch records its first snapshot without alerting. Positions that already exist are not announced.
+
+## Closed or liquidated?
+
+A vanished position waits for its settlement row from the Papertrade indexer to learn whether it closed or was liquidated, and to include PnL. After 10 minutes without a row it is reported as closed without PnL.
+
+## Delivery
+
+Each alert is queued per active channel and retried with backoff. A delivery that exhausts its attempts lands in the dead-letter list (`GET /api/deliveries/dead`) and can be re-queued after you fix the channel. An account is capped at 60 alerts per hour; extra alerts are stored as suppressed and never sent.
+
+## Papertrade API etiquette
+
+A `429` from Papertrade pauses polling for the advertised time and is never counted as a wallet error. At most `MAX_WALLETS_PER_TICK` wallets are polled per minute.
+
+
+<!-- __ORIGIN__/docs/api.md -->
+# API reference
+
+Base URL: `__ORIGIN__`. The OpenAPI 3.1 document is at [/openapi.json](/openapi.json). Errors are JSON: `{ "code": "...", "message": "..." }`.
+
+Authenticated endpoints need `Authorization: Bearer ptal_...`.
+
+| Method and path | Auth | Purpose |
+| --- | --- | --- |
+| `GET /healthz` | no | `200` when D1 is ready, `503` with `database: not_ready` until the schema is applied |
+| `GET /api/status` | no | `ready`, channel availability, limits, last cron poll |
+| `POST /api/accounts` | no | Create a subscription. Returns the token once. `201` |
+| `GET /api/me` | yes | Account, watches, channels, protocol rules |
+| `DELETE /api/me` | yes | Delete everything under the account |
+| `POST /api/watches` | yes | `{ address, role?, label?, rules? }`. Idempotent per address and role |
+| `PATCH /api/watches/{id}` | yes | `{ rules?, label? }`. Rules may be partial |
+| `DELETE /api/watches/{id}` | yes | Stop watching |
+| `POST /api/channels` | yes | `{ kind: "discord" \| "webhook", target, label? }`. Webhook secret returned once |
+| `PATCH /api/channels/{id}` | yes | `{ status: "active" \| "paused" }` |
+| `DELETE /api/channels/{id}` | yes | Remove |
+| `POST /api/channels/{id}/test` | yes | Send a real test message. 5 per minute |
+| `POST /api/telegram/link` | yes | Mint a 15 minute code for `/start <code>` in the bot |
+| `PUT /api/protocol-rules` | yes | Mint-rate threshold and market status alerts |
+| `GET /api/alerts` | yes | Alert history with per-channel delivery status. `?limit=&before=` |
+| `GET /api/deliveries/dead` | yes | Dead-letter deliveries |
+| `POST /api/deliveries/{id}/retry` | yes | Re-queue one |
+| `GET /api/papertrade/*` | no | Read-only same-origin proxy for the Papertrade API |
+| `POST /mcp` | optional | [MCP server](__ORIGIN__/docs/mcp.md) |
+
+## Wallet rules
+
+```json
+{
+  "liquidation": { "enabled": true, "belowPct": 0.05 },
+  "opened": true,
+  "closed": true,
+  "liquidated": true,
+  "balance": { "enabled": false, "changeUsd": 100 },
+  "sessionKey": { "enabled": true, "withinDays": 3 },
+  "rewards": { "enabled": false, "aboveUsdc": 10 }
+}
+```
+
+Unknown keys are rejected. Ranges: `belowPct` 0.001 to 50, `changeUsd` 1 to 1e9, `withinDays` 1 to 30, `aboveUsdc` 0.01 to 1e9.
+
+## Webhook signature
+
+Each webhook delivery carries `x-papertrade-alerts-signature: t=<unix>,v1=<hex>` where `v1` is the HMAC-SHA256 of `<t>.<raw body>` with your signing secret. Reject deliveries whose timestamp is older than a few minutes.
+
+## Storage not ready
+
+Until the D1 schema exists, every endpoint that needs it answers `503` with `code: service_initializing` and `Retry-After: 300`. `/api/status` still answers `200` with `ready: false` so clients can show an honest message.
+
+
+<!-- __ORIGIN__/docs/mcp.md -->
+# MCP server
+
+Endpoint: `__ORIGIN__/mcp`
+
+Transport: MCP Streamable HTTP, stateless. `POST` JSON-RPC 2.0 (single message or batch). Protocol versions `2025-06-18`, `2025-03-26` and `2024-11-05` are accepted. The reply is `application/json`, or one SSE `message` event when a client accepts only `text/event-stream`. `GET` with `Accept: text/event-stream` and `DELETE` answer `405`. There are no sessions, cookies or OAuth: `Origin` is never used for authorization.
+
+> No tool signs, sends funds or places orders. Tools that touch the account only manage alert rules and notification destinations, and only for the caller's own subscription.
+
+## Authentication
+
+Discovery and preview tools need nothing. Subscription tools need the management token from `create_subscription`, either as the `Authorization: Bearer ptal_...` header (preferred, configure it once in your client) or as the `token` argument.
+
+## Tools
+
+| Tool | Reads or writes | What it does |
+| --- | --- | --- |
+| `get_service_status` | read | Storage state, configured channels, limits, last cron poll |
+| `list_alert_types` | read | Every alert, its rule field, defaults and ranges |
+| `preview_wallet_alerts` | read (live API) | Which alerts a wallet would trigger right now: distance to liquidation per position, session key expiry, pending rewards |
+| `validate_destination` | read | SSRF-guard check of a Discord or webhook URL. No network request |
+| `create_subscription` | write | New subscription, token returned once |
+| `add_destination` | write | Connect a Discord webhook or https webhook you own. Signing secret returned once |
+| `test_destination` | write | Deliver one real test message. 5 per minute |
+| `create_alert_rule` | write | Watch a wallet with rules. Idempotent |
+| `list_alert_rules` | read | Rules and destinations with health |
+| `delete_alert_rule` | write, destructive | Stop watching one wallet |
+
+Every tool declares `inputSchema`, `outputSchema` and `annotations`. Results carry a text block and `structuredContent`. Tool failures use `isError: true` with a message that says how to recover; malformed calls use JSON-RPC errors (`-32700`, `-32600`, `-32601`, `-32602`).
+
+### preview_wallet_alerts
+
+```json
+{ "address": "0x...", "rules": { "liquidation": { "belowPct": 5 } } }
+```
+
+Returns `positions[]` (market, side, leverage, marginUsd, entryPrice, markPrice, bustPrice, `distanceToLiquidationPct`, `wouldAlert`), `sessionKeys[]`, `pendingRewardsUsdc`, `equityUsd` and the rules applied. Nothing is stored.
+
+### add_destination
+
+```json
+{ "kind": "webhook", "url": "https://example.com/hooks/papertrade", "label": "ops" }
+```
+
+Refused: `http:`, URLs with credentials, `localhost`, private, loopback, link-local, CGNAT and reserved addresses, and internal-only names.
+
+## Raw examples
+
+```bash
+URL=__ORIGIN__/mcp
+H='content-type: application/json'
+
+curl -s $URL -H "$H" -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}'
+
+curl -s $URL -H "$H" -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+curl -s $URL -H "$H" -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_service_status","arguments":{}}}'
+```
+
+## Limits
+
+Per client IP: 120 requests per minute overall, 12 writes per minute, 8 wallet previews per minute. Request bodies are capped at 64 KB and batches at 16 messages. Over the limit you get `429` with `Retry-After`. Account limits apply on top: 25 wallets, 6 channels, 60 alerts per hour. While storage is not ready, account tools return a clear error and discovery tools keep working. See [Security and limits](__ORIGIN__/docs/security.md).
+
+
+<!-- __ORIGIN__/docs/connect.md -->
+# Connect your AI
+
+Server URL: `__ORIGIN__/mcp`. Streamable HTTP, no OAuth. Preview tools work with no credentials. For subscription tools, add the management token from `create_subscription` as an `Authorization: Bearer ptal_...` header where the client supports headers (examples below use `$ALERTS_TOKEN`), or just let the agent pass it as the `token` argument.
+
+Client config formats change; each snippet follows the vendor documentation at the time of writing.
+
+## Claude Code
+
+```bash
+claude mcp add --transport http papertrade-alerts __ORIGIN__/mcp
+# with a token
+claude mcp add --transport http papertrade-alerts __ORIGIN__/mcp --header "Authorization: Bearer $ALERTS_TOKEN"
+```
+
+## Claude Desktop and claude.ai
+
+Settings, Connectors, **Add custom connector**, paste the server URL. For Claude Desktop you can also use the `mcp-remote` bridge in `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "papertrade-alerts": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "__ORIGIN__/mcp"]
+    }
+  }
+}
+```
+
+## Claude API (MCP connector)
+
+```bash
+curl https://api.anthropic.com/v1/messages \
+  -H "content-type: application/json" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "anthropic-beta: mcp-client-2025-11-20" \
+  -d '{
+    "model": "claude-sonnet-4-5",
+    "max_tokens": 1000,
+    "messages": [{"role": "user", "content": "Preview the alerts for 0x..."}],
+    "mcp_servers": [{"type": "url", "url": "__ORIGIN__/mcp", "name": "papertrade-alerts"}],
+    "tools": [{"type": "mcp_toolset", "mcp_server_name": "papertrade-alerts"}]
+  }'
+```
+
+Set `authorization_token` on the server entry to send the management token. Use any current Claude model id.
+
+## OpenAI Codex CLI
+
+`~/.codex/config.toml`:
+
+```toml
+[mcp_servers.papertrade-alerts]
+url = "__ORIGIN__/mcp"
+# optional: name of an environment variable holding the management token
+bearer_token_env_var = "ALERTS_TOKEN"
+```
+
+Or: `codex mcp add papertrade-alerts --url __ORIGIN__/mcp`
+
+## OpenAI Responses API
+
+```json
+{
+  "model": "gpt-5",
+  "input": "Preview the alerts for 0x...",
+  "tools": [{
+    "type": "mcp",
+    "server_label": "papertrade_alerts",
+    "server_description": "Wallet alerts for Papertrade. Read-only, never moves funds.",
+    "server_url": "__ORIGIN__/mcp",
+    "require_approval": "never"
+  }]
+}
+```
+
+Use `"require_approval": "always"` if you want to confirm each call; the write tools change your alert subscription.
+
+## ChatGPT
+
+Settings, Connectors, Advanced, enable **Developer mode**, then create a connector with the server URL and authentication set to none. Availability depends on your plan.
+
+## Gemini CLI
+
+`~/.gemini/settings.json` (or `.gemini/settings.json` in a project):
+
+```json
+{
+  "mcpServers": {
+    "papertrade-alerts": {
+      "httpUrl": "__ORIGIN__/mcp",
+      "headers": { "Authorization": "Bearer ptal_your_token" }
+    }
+  }
+}
+```
+
+Or: `gemini mcp add --transport http papertrade-alerts __ORIGIN__/mcp`
+
+## Cursor
+
+`.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global):
+
+```json
+{
+  "mcpServers": {
+    "papertrade-alerts": { "url": "__ORIGIN__/mcp" }
+  }
+}
+```
+
+## VS Code
+
+`.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "papertrade-alerts": { "type": "http", "url": "__ORIGIN__/mcp" }
+  }
+}
+```
+
+## Windsurf
+
+`~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "papertrade-alerts": { "serverUrl": "__ORIGIN__/mcp" }
+  }
+}
+```
+
+## Zed
+
+`settings.json`:
+
+```json
+{
+  "context_servers": {
+    "papertrade-alerts": { "url": "__ORIGIN__/mcp" }
+  }
+}
+```
+
+## Cline
+
+`cline_mcp_settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "papertrade-alerts": { "url": "__ORIGIN__/mcp", "type": "streamableHttp" }
+  }
+}
+```
+
+## Goose
+
+Run `goose configure`, choose **Add Extension**, then **Remote Extension (Streaming HTTP)**, and enter the server URL. Or in `~/.config/goose/config.yaml`:
+
+```yaml
+extensions:
+  papertrade-alerts:
+    type: streamable_http
+    name: papertrade-alerts
+    uri: __ORIGIN__/mcp
+    enabled: true
+    timeout: 300
+```
+
+## Continue
+
+`.continue/mcpServers/papertrade-alerts.yaml`:
+
+```yaml
+name: Papertrade Alerts
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: papertrade-alerts
+    type: streamable-http
+    url: __ORIGIN__/mcp
+```
+
+## Any other agent framework
+
+Frameworks without MCP support can use the HTTP API through the OpenAPI document at [/openapi.json](/openapi.json), which describes every endpoint, or fetch [/llms-full.txt](/llms-full.txt) for the full documentation in one file.
+
+## Verify
+
+```bash
+npx @modelcontextprotocol/inspector --cli __ORIGIN__/mcp --transport http --method tools/list
+```
+
+
+<!-- __ORIGIN__/docs/discovery.md -->
+# Agent discovery
+
+Every file below is served for real (not the app's HTML fallback), and each is generated from the live tool registry or the docs source, so none can drift from `/mcp`.
+
+| URL | Content |
+| --- | --- |
+| `/.well-known/mcp/server-card.json`, `/.well-known/mcp.json` | MCP server card: server info, streamable-http endpoint, capabilities, full tool list with schemas |
+| `/.well-known/agent-card.json`, `/.well-known/agent.json` | A2A agent card with one skill per MCP tool |
+| `/.well-known/api-catalog` | RFC 9727 API catalog as `application/linkset+json`, linking OpenAPI, `/mcp`, docs and llms.txt |
+| `/openapi.json` | OpenAPI 3.1 for the HTTP API and `/mcp` |
+| `/llms.txt`, `/llms-full.txt` | Short index and the complete docs inlined |
+| `/docs/<page>.md` | Raw markdown twin of every docs page |
+| `/robots.txt` | Content-Signal and explicit allow for GPTBot, ClaudeBot, Claude-User, OAI-SearchBot, Google-Extended, PerplexityBot |
+| `/sitemap.xml` | Landing, docs, discovery files |
+
+The home page also sends `Link` headers with `rel="service-desc"`, `rel="api-catalog"` and `rel="mcp"`.
+
+The server is described for the official MCP registry in `server.json` at the repository root (`io.github.nirholas/papertrade-alerts`).
+
+
+<!-- __ORIGIN__/docs/self-hosting.md -->
+# Self-hosting on Cloudflare
+
+You need a Cloudflare account and Node 20 or newer. The free plan works for a handful of wallets.
+
+```bash
+git clone https://github.com/nirholas/papertrade-alerts && cd papertrade-alerts
+npm install
+npx wrangler d1 create papertrade-alerts      # copy the printed database_id into wrangler.toml
+npm run deploy:site                           # builds the UI and docs, migrates D1, deploys the Worker
+```
+
+`deploy:site` applies the migrations before it deploys. If you deploy by hand, run `npm run db:migrate:remote` first.
+
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `PAPERTRADE_API_URL` | Papertrade API base. Default `https://exchange.papertrade.xyz` |
+| `EXPLORER_URL` | Link target in alerts |
+| `MAX_WALLETS_PER_TICK` | Wallets polled per minute. The free plan allows 50 subrequests per invocation, so keep it near 40 |
+| `PUBLIC_ORIGIN` | Canonical origin when you use a custom domain |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_BOT_USERNAME` | Secrets that enable the Telegram channel (`wrangler secret put`) |
+
+Then `TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... npm run telegram:webhook -- https://<your-worker>`.
+
+## D1 free tier
+
+D1's free plan limits daily row writes. The cron writes a few rows per minute even when idle, plus alert and delivery rows. If the account hits the daily cap, the Worker answers `503` with an explanation and the cron pauses quietly until midnight UTC. For anything beyond a personal deployment, use the Workers Paid plan.
+
+## Local development
+
+```bash
+npm run dev:site      # applies migrations locally and serves on :8796 with scheduled testing on
+```
+
+## Quality gates
+
+`npm run typecheck`, `npm test`, `npm run build:site`.
+
+
+<!-- __ORIGIN__/docs/security.md -->
+# Security and limits
+
+## What it never does
+
+It does not sign, send funds, swap, bridge, mint or pay. It has no private keys and no wallet connection. The MCP tools cannot move money.
+
+## Tokens and secrets
+
+- The management token is a bearer secret. Only its SHA-256 hash is stored.
+- Webhook signing secrets are shown once. Discord webhook URLs are masked in every API and tool response.
+- Secrets are never logged. MCP errors log a class name only.
+- Telegram, Discord and webhook text from third parties is untrusted data and is never interpreted as instructions.
+
+## SSRF guard
+
+Webhook destinations must be `https:`, carry no credentials, and resolve to a public host by name: loopback, private, link-local, CGNAT, benchmark, multicast and reserved IPv4, any IPv6 literal, single-label hosts and `.local`, `.localhost`, `.internal`, `.lan`, `.home`, `.corp`, `.intranet` are refused. Deliveries never follow redirects and time out. Use `validate_destination` to test a URL without a request.
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| MCP requests per client IP | 120 per minute |
+| MCP write tools per client IP | 12 per minute |
+| Wallet previews per client IP | 8 per minute |
+| MCP body, batch | 64 KB, 16 messages |
+| New subscriptions per network | 10 per hour |
+| Wallets, channels per subscription | 25, 6 |
+| Alerts per subscription | 60 per hour |
+| Test messages | 5 per minute |
+
+## CORS and origins
+
+`/mcp` and the discovery files send `Access-Control-Allow-Origin: *`. This is safe because nothing authenticates by cookie or by origin: the only credential is the bearer token you send explicitly.
+
+## Reporting a vulnerability
+
+See `SECURITY.md` in the repository.
+
+
+<!-- __ORIGIN__/docs/faq.md -->
+# FAQ
+
+**Is this official?** No. It is an unofficial community tool, not affiliated with Papertrade.
+
+**Can it trade for me or protect my position?** No. It only reads and notifies. Alerts are best effort and can be late or missed.
+
+**I lost my token.** It cannot be recovered. Create a new subscription and re-add your wallets.
+
+**Why did I not get an alert for a position that already existed?** A new watch is seeded silently. Only changes after the first poll alert.
+
+**Why one alert and not one per minute?** Thresholds are edge-triggered with hysteresis. See [Concepts](__ORIGIN__/docs/concepts.md).
+
+**How fast are alerts?** The cron polls every minute and each wallet is polled when due, so expect roughly a minute plus delivery time.
+
+**The API says service_initializing or 503.** The deployment's D1 schema has not been applied or its daily D1 quota is used up. It recovers on its own after the fix or at midnight UTC.
+
+**Can an agent read a wallet without an account?** Yes: `preview_wallet_alerts` needs no token.
+
+**Can an agent send a message to an arbitrary URL?** Only to a destination the caller registered and that passes the SSRF guard, at most 5 test messages a minute.
+
+**Which chains?** Papertrade runs on HyperEVM (chain 999). Addresses are standard 0x addresses.
+
+
+<!-- __ORIGIN__/docs/changelog.md -->
+# Changelog
+
+## 0.2.0
+
+- MCP server at `/mcp` with ten tools (preview, subscription, destinations, rules).
+- Agent discovery: MCP server card, A2A agent card, RFC 9727 API catalog, llms-full.txt.
+- Documentation site at `/docs/` with search and markdown twins.
+- Honest degradation: `503 service_initializing` and a quiet cron while D1 is not ready.
+- Stricter SSRF guard (CGNAT, benchmark, multicast, reserved ranges, internal suffixes).
+- Embeddable in Papertrade OS via `?embed=1`.
+
+## 0.1.0
+
+- Initial release: wallet and protocol alerts to Telegram, Discord and signed webhooks, web app, HTTP API.
+

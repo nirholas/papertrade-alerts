@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API reference - Papertrade Alerts docs</title>
+<meta name="description" content="Every HTTP endpoint, with authentication and examples. The machine-readable form is /openapi.json.">
+<link rel="canonical" href="__ORIGIN__/docs/api">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/api.md">
+<meta property="og:title" content="API reference - Papertrade Alerts docs">
+<meta property="og:description" content="Every HTTP endpoint, with authentication and examples. The machine-readable form is /openapi.json.">
+<meta property="og:url" content="__ORIGIN__/docs/api">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api" aria-current="page">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="api-reference">API reference</h1>
+<p>Base URL: <code>__ORIGIN__</code>. The OpenAPI 3.1 document is at <a href="/openapi.json">/openapi.json</a>. Errors are JSON: <code>{ &quot;code&quot;: &quot;...&quot;, &quot;message&quot;: &quot;...&quot; }</code>.</p>
+<p>Authenticated endpoints need <code>Authorization: Bearer ptal_...</code>.</p>
+<div class="tablewrap"><table><thead><tr><th>Method and path</th><th>Auth</th><th>Purpose</th></tr></thead><tbody><tr><td><code>GET /healthz</code></td><td>no</td><td><code>200</code> when D1 is ready, <code>503</code> with <code>database: not_ready</code> until the schema is applied</td></tr><tr><td><code>GET /api/status</code></td><td>no</td><td><code>ready</code>, channel availability, limits, last cron poll</td></tr><tr><td><code>POST /api/accounts</code></td><td>no</td><td>Create a subscription. Returns the token once. <code>201</code></td></tr><tr><td><code>GET /api/me</code></td><td>yes</td><td>Account, watches, channels, protocol rules</td></tr><tr><td><code>DELETE /api/me</code></td><td>yes</td><td>Delete everything under the account</td></tr><tr><td><code>POST /api/watches</code></td><td>yes</td><td><code>{ address, role?, label?, rules? }</code>. Idempotent per address and role</td></tr><tr><td><code>PATCH /api/watches/{id}</code></td><td>yes</td><td><code>{ rules?, label? }</code>. Rules may be partial</td></tr><tr><td><code>DELETE /api/watches/{id}</code></td><td>yes</td><td>Stop watching</td></tr><tr><td><code>POST /api/channels</code></td><td>yes</td><td><code>{ kind: &quot;discord&quot; | &quot;webhook&quot;, target, label? }</code>. Webhook secret returned once</td></tr><tr><td><code>PATCH /api/channels/{id}</code></td><td>yes</td><td><code>{ status: &quot;active&quot; | &quot;paused&quot; }</code></td></tr><tr><td><code>DELETE /api/channels/{id}</code></td><td>yes</td><td>Remove</td></tr><tr><td><code>POST /api/channels/{id}/test</code></td><td>yes</td><td>Send a real test message. 5 per minute</td></tr><tr><td><code>POST /api/telegram/link</code></td><td>yes</td><td>Mint a 15 minute code for <code>/start &lt;code&gt;</code> in the bot</td></tr><tr><td><code>PUT /api/protocol-rules</code></td><td>yes</td><td>Mint-rate threshold and market status alerts</td></tr><tr><td><code>GET /api/alerts</code></td><td>yes</td><td>Alert history with per-channel delivery status. <code>?limit=&amp;before=</code></td></tr><tr><td><code>GET /api/deliveries/dead</code></td><td>yes</td><td>Dead-letter deliveries</td></tr><tr><td><code>POST /api/deliveries/{id}/retry</code></td><td>yes</td><td>Re-queue one</td></tr><tr><td><code>GET /api/papertrade/*</code></td><td>no</td><td>Read-only same-origin proxy for the Papertrade API</td></tr><tr><td><code>POST /mcp</code></td><td>optional</td><td><a href="/docs/mcp">MCP server</a></td></tr></tbody></table></div>
+<h2 id="wallet-rules">Wallet rules<a class="anchor" href="#wallet-rules" aria-label="Link to Wallet rules">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-json">{
+  &quot;liquidation&quot;: { &quot;enabled&quot;: true, &quot;belowPct&quot;: 0.05 },
+  &quot;opened&quot;: true,
+  &quot;closed&quot;: true,
+  &quot;liquidated&quot;: true,
+  &quot;balance&quot;: { &quot;enabled&quot;: false, &quot;changeUsd&quot;: 100 },
+  &quot;sessionKey&quot;: { &quot;enabled&quot;: true, &quot;withinDays&quot;: 3 },
+  &quot;rewards&quot;: { &quot;enabled&quot;: false, &quot;aboveUsdc&quot;: 10 }
+}</code></pre></div>
+<p>Unknown keys are rejected. Ranges: <code>belowPct</code> 0.001 to 50, <code>changeUsd</code> 1 to 1e9, <code>withinDays</code> 1 to 30, <code>aboveUsdc</code> 0.01 to 1e9.</p>
+<h2 id="webhook-signature">Webhook signature<a class="anchor" href="#webhook-signature" aria-label="Link to Webhook signature">#</a></h2>
+<p>Each webhook delivery carries <code>x-papertrade-alerts-signature: t=&lt;unix&gt;,v1=&lt;hex&gt;</code> where <code>v1</code> is the HMAC-SHA256 of <code>&lt;t&gt;.&lt;raw body&gt;</code> with your signing secret. Reject deliveries whose timestamp is older than a few minutes.</p>
+<h2 id="storage-not-ready">Storage not ready<a class="anchor" href="#storage-not-ready" aria-label="Link to Storage not ready">#</a></h2>
+<p>Until the D1 schema exists, every endpoint that needs it answers <code>503</code> with <code>code: service_initializing</code> and <code>Retry-After: 300</code>. <code>/api/status</code> still answers <code>200</code> with <code>ready: false</code> so clients can show an honest message.</p>
+<div class="pager"><a class="prev" href="/docs/concepts"><span>Previous</span>Concepts</a><a class="next" href="/docs/mcp"><span>Next</span>MCP server</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/api.md">/docs/api.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#wallet-rules">Wallet rules</a><a href="#webhook-signature">Webhook signature</a><a href="#storage-not-ready">Storage not ready</a></aside>
+</div>
+</body>
+</html>

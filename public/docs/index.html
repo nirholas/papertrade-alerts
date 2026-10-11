@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview - Papertrade Alerts docs</title>
+<meta name="description" content="What Papertrade Alerts does, who it is for, and how the pieces fit together.">
+<link rel="canonical" href="__ORIGIN__/docs/">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/index.md">
+<meta property="og:title" content="Overview - Papertrade Alerts docs">
+<meta property="og:description" content="What Papertrade Alerts does, who it is for, and how the pieces fit together.">
+<meta property="og:url" content="__ORIGIN__/docs/">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/" aria-current="page">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="papertrade-alerts">Papertrade Alerts</h1>
+<p>Papertrade Alerts watches <a href="https://papertrade.xyz" rel="noopener">Papertrade</a> wallets and the protocol, and tells you when something needs attention: a position nearing its bust price, a position opening, closing or being liquidated, a session key about to lapse, staking rewards piling up, a market pausing. Messages go to Telegram, Discord or your own HMAC-signed webhook.</p>
+<blockquote><p>Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort and can be late or missed: never rely on them to protect funds.</p></blockquote>
+<h2 id="what-runs-where">What runs where<a class="anchor" href="#what-runs-where" aria-label="Link to What runs where">#</a></h2>
+<p>One Cloudflare Worker does everything:</p>
+<div class="tablewrap"><table><thead><tr><th>Piece</th><th>What it does</th></tr></thead><tbody><tr><td>Cron Trigger (every minute)</td><td>Polls due wallets from the public Papertrade API, diffs each against its last snapshot, records alerts, flushes the delivery queue.</td></tr><tr><td>D1 database</td><td>Accounts, watches, channels, alert history, delivery queue and per-wallet state.</td></tr><tr><td>HTTP API (<code>/api/*</code>)</td><td>Create a subscription, manage wallets and channels, read alert history. See the <a href="/docs/api">API reference</a>.</td></tr><tr><td>Management UI (<code>/</code>)</td><td>The same API as a web app. The token lives in your browser only.</td></tr><tr><td>MCP server (<code>/mcp</code>)</td><td>The same capabilities for AI agents, plus a read-only wallet preview. See <a href="/docs/mcp">MCP</a>.</td></tr></tbody></table></div>
+<h2 id="read-only-by-design">Read-only by design<a class="anchor" href="#read-only-by-design" aria-label="Link to Read-only by design">#</a></h2>
+<p>The service reads public Papertrade state. It never holds a private key, never signs, never sends funds and never places orders. Its tools cannot move money.</p>
+<h2 id="where-to-go-next">Where to go next<a class="anchor" href="#where-to-go-next" aria-label="Link to Where to go next">#</a></h2>
+<ul><li><a href="/docs/quickstart">Quickstart</a>: a working alert in five minutes.</li><li><a href="/docs/connect">Connect your AI</a>: add the MCP server to Claude, Codex, ChatGPT, Gemini, Cursor and more.</li><li><a href="/docs/concepts">Concepts</a>: how thresholds, seeding and delivery behave.</li></ul>
+<div class="pager"><span></span><a class="next" href="/docs/quickstart"><span>Next</span>Quickstart</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/index.md">/docs/index.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#what-runs-where">What runs where</a><a href="#read-only-by-design">Read-only by design</a><a href="#where-to-go-next">Where to go next</a></aside>
+</div>
+</body>
+</html>

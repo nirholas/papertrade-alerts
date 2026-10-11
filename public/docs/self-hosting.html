@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-hosting - Papertrade Alerts docs</title>
+<meta name="description" content="Deploy your own Papertrade Alerts to Cloudflare Workers with D1.">
+<link rel="canonical" href="__ORIGIN__/docs/self-hosting">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/self-hosting.md">
+<meta property="og:title" content="Self-hosting - Papertrade Alerts docs">
+<meta property="og:description" content="Deploy your own Papertrade Alerts to Cloudflare Workers with D1.">
+<meta property="og:url" content="__ORIGIN__/docs/self-hosting">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting" aria-current="page">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="self-hosting-on-cloudflare">Self-hosting on Cloudflare</h1>
+<p>You need a Cloudflare account and Node 20 or newer. The free plan works for a handful of wallets.</p>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">git clone https://github.com/nirholas/papertrade-alerts &amp;&amp; cd papertrade-alerts
+npm install
+npx wrangler d1 create papertrade-alerts      # copy the printed database_id into wrangler.toml
+npm run deploy:site                           # builds the UI and docs, migrates D1, deploys the Worker</code></pre></div>
+<p><code>deploy:site</code> applies the migrations before it deploys. If you deploy by hand, run <code>npm run db:migrate:remote</code> first.</p>
+<h2 id="configuration">Configuration<a class="anchor" href="#configuration" aria-label="Link to Configuration">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Variable</th><th>Purpose</th></tr></thead><tbody><tr><td><code>PAPERTRADE_API_URL</code></td><td>Papertrade API base. Default <code>https://exchange.papertrade.xyz</code></td></tr><tr><td><code>EXPLORER_URL</code></td><td>Link target in alerts</td></tr><tr><td><code>MAX_WALLETS_PER_TICK</code></td><td>Wallets polled per minute. The free plan allows 50 subrequests per invocation, so keep it near 40</td></tr><tr><td><code>PUBLIC_ORIGIN</code></td><td>Canonical origin when you use a custom domain</td></tr><tr><td><code>TELEGRAM_BOT_TOKEN</code>, <code>TELEGRAM_WEBHOOK_SECRET</code>, <code>TELEGRAM_BOT_USERNAME</code></td><td>Secrets that enable the Telegram channel (<code>wrangler secret put</code>)</td></tr></tbody></table></div>
+<p>Then <code>TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... npm run telegram:webhook -- https://&lt;your-worker&gt;</code>.</p>
+<h2 id="d1-free-tier">D1 free tier<a class="anchor" href="#d1-free-tier" aria-label="Link to D1 free tier">#</a></h2>
+<p>D1's free plan limits daily row writes. The cron writes a few rows per minute even when idle, plus alert and delivery rows. If the account hits the daily cap, the Worker answers <code>503</code> with an explanation and the cron pauses quietly until midnight UTC. For anything beyond a personal deployment, use the Workers Paid plan.</p>
+<h2 id="local-development">Local development<a class="anchor" href="#local-development" aria-label="Link to Local development">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">npm run dev:site      # applies migrations locally and serves on :8796 with scheduled testing on</code></pre></div>
+<h2 id="quality-gates">Quality gates<a class="anchor" href="#quality-gates" aria-label="Link to Quality gates">#</a></h2>
+<p><code>npm run typecheck</code>, <code>npm test</code>, <code>npm run build:site</code>.</p>
+<div class="pager"><a class="prev" href="/docs/discovery"><span>Previous</span>Agent discovery</a><a class="next" href="/docs/security"><span>Next</span>Security and limits</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/self-hosting.md">/docs/self-hosting.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#configuration">Configuration</a><a href="#d1-free-tier">D1 free tier</a><a href="#local-development">Local development</a><a href="#quality-gates">Quality gates</a></aside>
+</div>
+</body>
+</html>

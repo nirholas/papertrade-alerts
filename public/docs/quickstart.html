@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quickstart - Papertrade Alerts docs</title>
+<meta name="description" content="Create a subscription, connect a destination and watch a wallet in five minutes.">
+<link rel="canonical" href="__ORIGIN__/docs/quickstart">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/quickstart.md">
+<meta property="og:title" content="Quickstart - Papertrade Alerts docs">
+<meta property="og:description" content="Create a subscription, connect a destination and watch a wallet in five minutes.">
+<meta property="og:url" content="__ORIGIN__/docs/quickstart">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart" aria-current="page">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="quickstart">Quickstart</h1>
+<p>You need a wallet address to watch and somewhere to receive messages (a Discord webhook URL or an https endpoint you control).</p>
+<h2 id="with-the-web-app">With the web app<a class="anchor" href="#with-the-web-app" aria-label="Link to With the web app">#</a></h2>
+<ol><li>Open the app, press <strong>Create my subscription</strong> and copy the management token. It is shown once.</li><li>Under <strong>Channels</strong>, paste a Discord webhook URL or webhook endpoint and press <strong>Send test</strong>.</li><li>Under <strong>Wallets</strong>, add the address and adjust thresholds.</li></ol>
+<h2 id="with-curl">With curl<a class="anchor" href="#with-curl" aria-label="Link to With curl">#</a></h2>
+<div class="code"><button type="button" class="copy" aria-label="Copy code">Copy</button><pre><code class="lang-bash">BASE=__ORIGIN__
+
+# 1. Create a subscription. The token is returned once.
+TOKEN=$(curl -s -X POST $BASE/api/accounts | jq -r .token)
+
+# 2. Add a destination you own.
+curl -s -X POST $BASE/api/channels \
+  -H &quot;authorization: Bearer $TOKEN&quot; -H 'content-type: application/json' \
+  -d '{&quot;kind&quot;:&quot;discord&quot;,&quot;target&quot;:&quot;https://discord.com/api/webhooks/&lt;id&gt;/&lt;token&gt;&quot;}'
+
+# 3. Watch a wallet. Liquidation distance below 3 percent, plus opens and closes.
+curl -s -X POST $BASE/api/watches \
+  -H &quot;authorization: Bearer $TOKEN&quot; -H 'content-type: application/json' \
+  -d '{&quot;address&quot;:&quot;0x0000000000000000000000000000000000000000&quot;,&quot;rules&quot;:{&quot;liquidation&quot;:{&quot;enabled&quot;:true,&quot;belowPct&quot;:3}}}'</code></pre></div>
+<p>Replace the zero address with the wallet you want to watch.</p>
+<h2 id="with-an-ai-agent">With an AI agent<a class="anchor" href="#with-an-ai-agent" aria-label="Link to With an AI agent">#</a></h2>
+<p>Add the MCP server (see <a href="/docs/connect">Connect your AI</a>) and ask: &quot;Preview what alerts 0x... would trigger, then set up a Discord alert for it.&quot; The agent calls <code>preview_wallet_alerts</code>, <code>create_subscription</code>, <code>add_destination</code>, <code>test_destination</code> and <code>create_alert_rule</code>.</p>
+<h2 id="what-happens-next">What happens next<a class="anchor" href="#what-happens-next" aria-label="Link to What happens next">#</a></h2>
+<p>The first poll of a new watch is seeded silently, so existing positions are not announced. From the second poll on, changes become alerts. See <a href="/docs/concepts">Concepts</a>.</p>
+<div class="pager"><a class="prev" href="/docs/"><span>Previous</span>Overview</a><a class="next" href="/docs/concepts"><span>Next</span>Concepts</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/quickstart.md">/docs/quickstart.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#with-the-web-app">With the web app</a><a href="#with-curl">With curl</a><a href="#with-an-ai-agent">With an AI agent</a><a href="#what-happens-next">What happens next</a></aside>
+</div>
+</body>
+</html>

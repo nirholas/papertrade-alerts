@@ -1,12 +1,25 @@
-# papertrade-alerts
+# Papertrade Alerts
 
-> Unofficial, self-hostable alerting service for Papertrade (papertrade.xyz) wallets on Cloudflare Workers + D1. Not affiliated with Papertrade.
+> Unofficial, self-hostable alerting service for Papertrade (papertrade.xyz) wallets on Cloudflare Workers + D1, with an MCP server for AI agents. Not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort. Nothing here signs, sends funds or places orders.
 
-Alerts: liquidation distance, position opened/closed/liquidated, balance change, session key expiry, staking rewards, PAPER mint rate, market paused/close-only, followed wallet activity. Channels: Telegram, Discord webhook, HMAC-SHA256 signed webhook.
-
+- MCP endpoint (Streamable HTTP, stateless): __ORIGIN__/mcp
+- MCP server card: __ORIGIN__/.well-known/mcp/server-card.json
+- Agent card: __ORIGIN__/.well-known/agent-card.json
+- OpenAPI 3.1: __ORIGIN__/openapi.json
+- Full documentation in one file: __ORIGIN__/llms-full.txt
 - Source: https://github.com/nirholas/papertrade-alerts
-- OpenAPI: /openapi.json
-- Auth: `POST /api/accounts` returns a one-time bearer token (`ptal_...`); send `Authorization: Bearer <token>`.
-- Key endpoints: GET /api/me, POST /api/watches, POST /api/channels, POST /api/channels/{id}/test, GET /api/alerts, GET /api/deliveries/dead, PUT /api/protocol-rules, GET /api/status
-- Webhook signature header: `x-papertrade-alerts-signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">`
-- High leverage can lose your whole margin. Alerts are best effort.
+- Auth: POST /api/accounts (or the MCP create_subscription tool) returns a one-time bearer token (ptal_...). Send Authorization: Bearer <token>.
+
+## Docs
+
+- [Overview](__ORIGIN__/docs/index.md): What Papertrade Alerts does, who it is for, and how the pieces fit together.
+- [Quickstart](__ORIGIN__/docs/quickstart.md): Create a subscription, connect a destination and watch a wallet in five minutes.
+- [Concepts](__ORIGIN__/docs/concepts.md): Thresholds, seeding, edge-triggering, delivery retries and the Papertrade rules that shape alerts.
+- [API reference](__ORIGIN__/docs/api.md): Every HTTP endpoint, with authentication and examples. The machine-readable form is /openapi.json.
+- [MCP server](__ORIGIN__/docs/mcp.md): The /mcp endpoint, its ten tools with schemas, authentication, limits and examples.
+- [Connect your AI](__ORIGIN__/docs/connect.md): Copy-paste setup for Claude, Codex, ChatGPT, Gemini, Cursor, VS Code, Windsurf, Zed, Cline, Goose, Continue and any OpenAI-compatible agent.
+- [Agent discovery](__ORIGIN__/docs/discovery.md): The well-known files, llms.txt, OpenAPI and headers that let agents find and understand this service.
+- [Self-hosting](__ORIGIN__/docs/self-hosting.md): Deploy your own Papertrade Alerts to Cloudflare Workers with D1.
+- [Security and limits](__ORIGIN__/docs/security.md): Threat model, SSRF guard, token handling, rate limits and what the service never does.
+- [FAQ](__ORIGIN__/docs/faq.md): Common questions about alerts, tokens, delivery and the MCP server.
+- [Changelog](__ORIGIN__/docs/changelog.md): Release notes.

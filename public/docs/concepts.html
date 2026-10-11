@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepts - Papertrade Alerts docs</title>
+<meta name="description" content="Thresholds, seeding, edge-triggering, delivery retries and the Papertrade rules that shape alerts.">
+<link rel="canonical" href="__ORIGIN__/docs/concepts">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/concepts.md">
+<meta property="og:title" content="Concepts - Papertrade Alerts docs">
+<meta property="og:description" content="Thresholds, seeding, edge-triggering, delivery retries and the Papertrade rules that shape alerts.">
+<meta property="og:url" content="__ORIGIN__/docs/concepts">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts" aria-current="page">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="concepts">Concepts</h1>
+<h2 id="subscription-and-token">Subscription and token<a class="anchor" href="#subscription-and-token" aria-label="Link to Subscription and token">#</a></h2>
+<p>A subscription is an account with no email or password. Creating one returns a management token that starts with <code>ptal_</code>. Only its SHA-256 hash is stored, so a lost token cannot be recovered. Send it as <code>Authorization: Bearer ptal_...</code>.</p>
+<h2 id="watches-and-roles">Watches and roles<a class="anchor" href="#watches-and-roles" aria-label="Link to Watches and roles">#</a></h2>
+<p>A watch is one wallet address plus rules. The role decides what it reports:</p>
+<ul><li><code>own</code>: your wallet. Account-level alerts (liquidation distance, balance change, session keys, rewards) plus trade events.</li><li><code>follow</code>: someone else's wallet, for example from the leaderboard. Trade events only.</li></ul>
+<h2 id="alert-types">Alert types<a class="anchor" href="#alert-types" aria-label="Link to Alert types">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Type</th><th>Fires when</th><th>Default</th></tr></thead><tbody><tr><td><code>liquidation_distance</code></td><td>Mark price is closer than <code>belowPct</code> percent to a position's bust price</td><td>on, 0.05%</td></tr><tr><td><code>position_opened</code> / <code>follow_opened</code></td><td>A new position appears</td><td>on</td></tr><tr><td><code>position_closed</code></td><td>A position closes, with net PnL and PAPER minted</td><td>on</td></tr><tr><td><code>position_liquidated</code></td><td>A position is liquidated</td><td>on</td></tr><tr><td><code>balance_change</code></td><td>Equity moved by more than <code>changeUsd</code></td><td>off</td></tr><tr><td><code>session_key_expiring</code></td><td>A session key expires within <code>withinDays</code></td><td>on, 3 days</td></tr><tr><td><code>staking_rewards</code></td><td>Pending staking rewards reach <code>aboveUsdc</code></td><td>off</td></tr><tr><td><code>mint_rate</code>, <code>market_status</code></td><td>Protocol level: PAPER mint rate threshold, market paused or close-only</td><td>market status on</td></tr></tbody></table></div>
+<h2 id="edge-triggered-not-level-triggered">Edge-triggered, not level-triggered<a class="anchor" href="#edge-triggered-not-level-triggered" aria-label="Link to Edge-triggered, not level-triggered">#</a></h2>
+<p>A threshold alert fires when a value crosses its threshold and re-arms only after it recovers (liquidation distance re-arms at 1.5 times the threshold). A wallet that sits below a threshold for an hour produces one alert, not sixty. Trade events carry a per-position dedupe key, so a retried poll can never send twice.</p>
+<h2 id="silent-seeding">Silent seeding<a class="anchor" href="#silent-seeding" aria-label="Link to Silent seeding">#</a></h2>
+<p>A new watch records its first snapshot without alerting. Positions that already exist are not announced.</p>
+<h2 id="closed-or-liquidated">Closed or liquidated?<a class="anchor" href="#closed-or-liquidated" aria-label="Link to Closed or liquidated?">#</a></h2>
+<p>A vanished position waits for its settlement row from the Papertrade indexer to learn whether it closed or was liquidated, and to include PnL. After 10 minutes without a row it is reported as closed without PnL.</p>
+<h2 id="delivery">Delivery<a class="anchor" href="#delivery" aria-label="Link to Delivery">#</a></h2>
+<p>Each alert is queued per active channel and retried with backoff. A delivery that exhausts its attempts lands in the dead-letter list (<code>GET /api/deliveries/dead</code>) and can be re-queued after you fix the channel. An account is capped at 60 alerts per hour; extra alerts are stored as suppressed and never sent.</p>
+<h2 id="papertrade-api-etiquette">Papertrade API etiquette<a class="anchor" href="#papertrade-api-etiquette" aria-label="Link to Papertrade API etiquette">#</a></h2>
+<p>A <code>429</code> from Papertrade pauses polling for the advertised time and is never counted as a wallet error. At most <code>MAX_WALLETS_PER_TICK</code> wallets are polled per minute.</p>
+<div class="pager"><a class="prev" href="/docs/quickstart"><span>Previous</span>Quickstart</a><a class="next" href="/docs/api"><span>Next</span>API reference</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/concepts.md">/docs/concepts.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#subscription-and-token">Subscription and token</a><a href="#watches-and-roles">Watches and roles</a><a href="#alert-types">Alert types</a><a href="#edge-triggered-not-level-triggered">Edge-triggered, not level-triggered</a><a href="#silent-seeding">Silent seeding</a><a href="#closed-or-liquidated">Closed or liquidated?</a><a href="#delivery">Delivery</a><a href="#papertrade-api-etiquette">Papertrade API etiquette</a></aside>
+</div>
+</body>
+</html>

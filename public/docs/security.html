@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security and limits - Papertrade Alerts docs</title>
+<meta name="description" content="Threat model, SSRF guard, token handling, rate limits and what the service never does.">
+<link rel="canonical" href="__ORIGIN__/docs/security">
+<link rel="alternate" type="text/markdown" href="__ORIGIN__/docs/security.md">
+<meta property="og:title" content="Security and limits - Papertrade Alerts docs">
+<meta property="og:description" content="Threat model, SSRF guard, token handling, rate limits and what the service never does.">
+<meta property="og:url" content="__ORIGIN__/docs/security">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/docs/docs.css">
+<script src="/docs/docs.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort.</div>
+<header class="top">
+  <div class="bar">
+    <button type="button" id="menu" class="ghost" aria-label="Toggle navigation" aria-expanded="false" aria-controls="side">Menu</button>
+    <a class="brand" href="/docs/"><span class="dot" aria-hidden="true"></span>Papertrade Alerts <span class="mute">docs</span></a>
+    <div class="grow"></div>
+    <div class="searchbox"><input id="q" type="search" placeholder="Search docs" aria-label="Search docs" autocomplete="off" spellcheck="false"><div id="results" role="listbox" hidden></div></div>
+    <a class="toplink" href="/">App</a>
+    <a class="toplink" href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="side" class="side" aria-label="Documentation"><a href="/docs/">Overview</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/concepts">Concepts</a><a href="/docs/api">API reference</a><a href="/docs/mcp">MCP server</a><a href="/docs/connect">Connect your AI</a><a href="/docs/discovery">Agent discovery</a><a href="/docs/self-hosting">Self-hosting</a><a href="/docs/security" aria-current="page">Security and limits</a><a href="/docs/faq">FAQ</a><a href="/docs/changelog">Changelog</a></nav>
+  <main id="main" class="doc">
+<h1 id="security-and-limits">Security and limits</h1>
+<h2 id="what-it-never-does">What it never does<a class="anchor" href="#what-it-never-does" aria-label="Link to What it never does">#</a></h2>
+<p>It does not sign, send funds, swap, bridge, mint or pay. It has no private keys and no wallet connection. The MCP tools cannot move money.</p>
+<h2 id="tokens-and-secrets">Tokens and secrets<a class="anchor" href="#tokens-and-secrets" aria-label="Link to Tokens and secrets">#</a></h2>
+<ul><li>The management token is a bearer secret. Only its SHA-256 hash is stored.</li><li>Webhook signing secrets are shown once. Discord webhook URLs are masked in every API and tool response.</li><li>Secrets are never logged. MCP errors log a class name only.</li><li>Telegram, Discord and webhook text from third parties is untrusted data and is never interpreted as instructions.</li></ul>
+<h2 id="ssrf-guard">SSRF guard<a class="anchor" href="#ssrf-guard" aria-label="Link to SSRF guard">#</a></h2>
+<p>Webhook destinations must be <code>https:</code>, carry no credentials, and resolve to a public host by name: loopback, private, link-local, CGNAT, benchmark, multicast and reserved IPv4, any IPv6 literal, single-label hosts and <code>.local</code>, <code>.localhost</code>, <code>.internal</code>, <code>.lan</code>, <code>.home</code>, <code>.corp</code>, <code>.intranet</code> are refused. Deliveries never follow redirects and time out. Use <code>validate_destination</code> to test a URL without a request.</p>
+<h2 id="limits">Limits<a class="anchor" href="#limits" aria-label="Link to Limits">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Limit</th><th>Value</th></tr></thead><tbody><tr><td>MCP requests per client IP</td><td>120 per minute</td></tr><tr><td>MCP write tools per client IP</td><td>12 per minute</td></tr><tr><td>Wallet previews per client IP</td><td>8 per minute</td></tr><tr><td>MCP body, batch</td><td>64 KB, 16 messages</td></tr><tr><td>New subscriptions per network</td><td>10 per hour</td></tr><tr><td>Wallets, channels per subscription</td><td>25, 6</td></tr><tr><td>Alerts per subscription</td><td>60 per hour</td></tr><tr><td>Test messages</td><td>5 per minute</td></tr></tbody></table></div>
+<h2 id="cors-and-origins">CORS and origins<a class="anchor" href="#cors-and-origins" aria-label="Link to CORS and origins">#</a></h2>
+<p><code>/mcp</code> and the discovery files send <code>Access-Control-Allow-Origin: *</code>. This is safe because nothing authenticates by cookie or by origin: the only credential is the bearer token you send explicitly.</p>
+<h2 id="reporting-a-vulnerability">Reporting a vulnerability<a class="anchor" href="#reporting-a-vulnerability" aria-label="Link to Reporting a vulnerability">#</a></h2>
+<p>See <code>SECURITY.md</code> in the repository.</p>
+<div class="pager"><a class="prev" href="/docs/self-hosting"><span>Previous</span>Self-hosting</a><a class="next" href="/docs/faq"><span>Next</span>FAQ</a></div>
+<p class="mute foot">Raw markdown: <a href="/docs/security.md">/docs/security.md</a>. Apache-2.0. Unofficial, not affiliated with Papertrade.</p>
+  </main>
+  <aside class="toc" aria-label="On this page"><strong>On this page</strong><a href="#what-it-never-does">What it never does</a><a href="#tokens-and-secrets">Tokens and secrets</a><a href="#ssrf-guard">SSRF guard</a><a href="#limits">Limits</a><a href="#cors-and-origins">CORS and origins</a><a href="#reporting-a-vulnerability">Reporting a vulnerability</a></aside>
+</div>
+</body>
+</html>
