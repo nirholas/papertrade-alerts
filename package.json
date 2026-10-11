@@ -28,7 +28,21 @@
     "discord",
     "webhook",
     "cloudflare-workers",
-    "d1"
+    "d1",
+    "liquidation-alerts",
+    "telegram-bot",
+    "discord-bot",
+    "webhooks",
+    "cloudflare-d1",
+    "cron",
+    "self-hosted",
+    "perps",
+    "perpetuals",
+    "defi",
+    "typescript",
+    "crypto",
+    "web3",
+    "notifications"
   ],
   "repository": {
     "type": "git",
