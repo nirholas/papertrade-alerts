@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "hono": "^4.13.13",
-    "papertrade-sdk": "file:../papertrade-sdk-0.1.0.tgz",
+    "papertrade-sdk": "github:nirholas/papertrade-sdk",
     "viem": "^2.57.4"
   },
   "devDependencies": {
