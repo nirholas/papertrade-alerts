@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Papertrade Alerts - liquidation, position and reward alerts</title>
+<meta name="description" content="Unofficial, self-hostable alerts for Papertrade wallets: liquidation distance, positions opened, closed or liquidated, session key expiry and staking rewards, delivered to Telegram, Discord or a signed webhook.">
+<link rel="canonical" href="__ORIGIN__/">
+<meta property="og:title" content="Papertrade Alerts">
+<meta property="og:description" content="Liquidation, position and reward alerts for Papertrade wallets. Telegram, Discord and signed webhooks. Open source, runs on Cloudflare.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="__ORIGIN__/">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Papertrade Alerts","applicationCategory":"FinanceApplication","operatingSystem":"Web","description":"Unofficial, self-hostable alerting service for Papertrade wallets.","url":"__ORIGIN__/","license":"https://opensource.org/licenses/MIT","author":{"@type":"Person","name":"nirholas"},"codeRepository":"https://github.com/nirholas/papertrade-alerts"}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin. Alerts are best effort and can be late or missed: never rely on them to protect funds.</div>
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="/" aria-label="Papertrade Alerts home"><span class="dot" aria-hidden="true"></span>Papertrade Alerts</a>
+    <nav aria-label="Sections">
+      <a href="#watches">Wallets</a><a href="#channels">Channels</a><a href="#alerts">Alerts</a><a href="#protocol">Protocol</a>
+    </nav>
+    <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+<main id="main" class="wrap">
+  <section class="hero" aria-labelledby="h-hero">
+    <h1 id="h-hero">Know before the liquidation.</h1>
+    <p class="lede">Watch any Papertrade wallet. Get a message when a position nears its bust price, opens, closes or is liquidated, when a session key is about to expire, or when staking rewards pile up. Delivered to Telegram, Discord or your own signed webhook.</p>
+    <div id="status" class="chips" aria-live="polite"></div>
+  </section>
+  <div id="app" aria-live="polite"><div class="skel tall"></div></div>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <p>Open source (MIT). Self-host it: <a href="https://github.com/nirholas/papertrade-alerts">github.com/nirholas/papertrade-alerts</a>. API: <a href="/openapi.json">/openapi.json</a>.</p>
+    <p>Related: <a href="https://github.com/nirholas/papertrade-sdk">SDK</a> <a href="https://github.com/nirholas/papertrade-ai">AI</a> <a href="https://papertrade-terminal.pages.dev">Terminal</a> <a href="https://papertrade-analytics.pages.dev">Analytics</a> <a href="https://papertrade-explorer.pages.dev">Explorer</a> <a href="https://papertrade-liquidations.pages.dev">Liquidations</a> <a href="https://papertrade-yield.pages.dev">Yield</a> <a href="https://papertrade-copytrade.pages.dev">Copytrade</a> <a href="https://papertrade-x402.pages.dev">x402</a></p>
+    <p>Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin.</p>
+  </div>
+</footer>
+<script src="/app.js" defer></script>
+</body>
+</html>

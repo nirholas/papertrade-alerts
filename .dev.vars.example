@@ -1,0 +1,10 @@
+# Copy to .dev.vars for local `wrangler dev`. In production use `wrangler secret put NAME`.
+# Telegram is disabled (and shown as disabled in the UI) unless both of the first two are set.
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+# Optional: bot username without @, enables the t.me deep link in the UI.
+TELEGRAM_BOT_USERNAME=
+# Local development only: lets webhook channels point at http://127.0.0.1.
+ALLOW_INSECURE_WEBHOOKS=true
+# Optional: canonical origin for SEO and discovery files. Unset uses the request origin.
+PUBLIC_ORIGIN=

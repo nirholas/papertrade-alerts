@@ -1,0 +1,30 @@
+name = "papertrade-alerts"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Static UI. The Worker runs first for API routes, the OpenAPI document, and the discovery
+# files (index, robots, sitemap, security.txt), whose __ORIGIN__ token it fills with the public origin.
+[assets]
+directory = "public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/openapi.json", "/healthz", "/", "/index.html", "/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]
+
+# Poll every minute. Local: `wrangler dev --test-scheduled`, then GET /__scheduled.
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "papertrade-alerts"
+# Replace with the id printed by `wrangler d1 create papertrade-alerts`. Local dev ignores it.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+PAPERTRADE_API_URL = "https://exchange.papertrade.xyz"
+EXPLORER_URL = "https://papertrade-explorer.pages.dev"
+MAX_WALLETS_PER_TICK = "40"
+# Secrets (set with `wrangler secret put`, or in .dev.vars locally):
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, TELEGRAM_BOT_USERNAME (optional, enables deep links)

@@ -1,0 +1,12 @@
+# papertrade-alerts
+
+> Unofficial, self-hostable alerting service for Papertrade (papertrade.xyz) wallets on Cloudflare Workers + D1. Not affiliated with Papertrade.
+
+Alerts: liquidation distance, position opened/closed/liquidated, balance change, session key expiry, staking rewards, PAPER mint rate, market paused/close-only, followed wallet activity. Channels: Telegram, Discord webhook, HMAC-SHA256 signed webhook.
+
+- Source: https://github.com/nirholas/papertrade-alerts
+- OpenAPI: /openapi.json
+- Auth: `POST /api/accounts` returns a one-time bearer token (`ptal_...`); send `Authorization: Bearer <token>`.
+- Key endpoints: GET /api/me, POST /api/watches, POST /api/channels, POST /api/channels/{id}/test, GET /api/alerts, GET /api/deliveries/dead, PUT /api/protocol-rules, GET /api/status
+- Webhook signature header: `x-papertrade-alerts-signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">`
+- High leverage can lose your whole margin. Alerts are best effort.
