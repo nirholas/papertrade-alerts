@@ -34,7 +34,7 @@ interface Me { accountId: string; watches: Watch[]; channels: Channel[]; protoco
 interface Delivery { id: string; channelKind: string; channelLabel: string | null; status: 'pending' | 'sent' | 'dead'; attempts: number; nextAttemptAt: number | null; lastError: string | null; httpStatus: number | null }
 interface AlertItem { id: string; type: string; severity: string; title: string; body: string; fields: { name: string; value: string }[]; url: string | null; suppressed: boolean; createdAt: number; address: string | null; deliveries: Delivery[] }
 interface DeadItem { id: string; title: string; channelKind: string; channelLabel: string | null; attempts: number; lastError: string | null; httpStatus: number | null }
-interface Status { channels: { kind: string; enabled: boolean; reason?: string }[]; telegramBot: string | null; insecureWebhooks: boolean; lastTick: { at: number } | null }
+interface Status { ready?: boolean; notice?: string | null; channels: { kind: string; enabled: boolean; reason?: string }[]; telegramBot: string | null; insecureWebhooks: boolean; lastTick: { at: number } | null }
 interface LbAccount { address: string; leaderboardName: string | null; currentOpenPositionCount: number; totalWindowedPnl: string }
 
 class HttpError extends Error {
@@ -99,6 +99,12 @@ async function copy(text: string): Promise<void> {
 function renderStatus(): void {
   statusEl.replaceChildren();
   if (!serverStatus) return;
+  const banner = document.getElementById('banner') as HTMLElement;
+  banner.hidden = serverStatus.ready !== false;
+  banner.className = 'banner';
+  banner.replaceChildren(...(serverStatus.ready === false
+    ? [h('strong', {}, 'Creating subscriptions is paused'), h('p', {}, serverStatus.notice ?? 'The alert database is not ready yet.'), h('p', {}, 'Wallet previews and the MCP discovery tools still work.')]
+    : []));
   for (const c of serverStatus.channels) {
     statusEl.append(h('span', { class: `chip ${c.enabled ? 'on' : 'off'}`, title: c.reason ?? '' }, h('i'), `${c.kind}: ${c.enabled ? 'available' : 'disabled'}`));
   }
@@ -112,6 +118,13 @@ async function boot(): Promise<void> {
     renderStatus();
   } catch (err) {
     root.replaceChildren(errorBox(err, () => void boot()));
+    return;
+  }
+  if (serverStatus.ready === false) {
+    root.replaceChildren(h('div', { class: 'empty', role: 'status' },
+      h('p', {}, h('strong', {}, 'Alert storage is starting up. ')),
+      h('p', {}, serverStatus.notice ?? 'The database is not ready yet. Nothing is lost: try again in a few minutes.'),
+      h('button', { type: 'button', onclick: () => void boot() }, 'Check again')));
     return;
   }
   if (!token) return renderWelcome();
@@ -445,6 +458,66 @@ function accountCard(): HTMLElement {
   return h('section', { class: 'card', 'aria-labelledby': 'h-acct' }, h('h2', { id: 'h-acct' }, 'Subscription'),
     h('p', { class: 'sub' }, 'The token is kept in this browser only. Forgetting it does not delete anything: paste the token later to come back.'), h('div', { class: 'row' }, forget, del));
 }
+
+document.querySelectorAll<HTMLButtonElement>('[data-copy-from]').forEach((b) => b.addEventListener('click', () => {
+  const src = document.getElementById(b.dataset.copyFrom ?? '');
+  if (src?.textContent) void copy(src.textContent);
+}));
+
+interface PreviewPosition { market: string; side: string; leverage: number; marginUsd: number; markPrice: number | null; bustPrice: number; distanceToLiquidationPct: number | null; wouldAlert: boolean }
+interface Preview { address: string; equityUsd: number; positions: PreviewPosition[]; sessionKeys: { daysLeft: number; wouldAlert: boolean }[]; pendingRewardsUsdc: number; notes: string[] }
+
+async function mcpCall<T>(name: string, args: Record<string, unknown>): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch('/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }) });
+  } catch { throw new HttpError(0, 'network', 'Could not reach the server. Check your connection and retry.'); }
+  if (res.status === 429) throw new HttpError(429, 'rate_limited', 'Too many previews. Wait a minute and try again.');
+  const body = (await res.json().catch(() => null)) as { result?: { isError?: boolean; content?: { text: string }[]; structuredContent?: T }; error?: { message: string } } | null;
+  if (!body || body.error) throw new HttpError(res.status, 'mcp', body?.error?.message ?? 'The server sent an unreadable reply.');
+  if (body.result?.isError) throw new HttpError(400, 'tool', body.result.content?.[0]?.text ?? 'The tool failed.');
+  return body.result?.structuredContent as T;
+}
+
+function initTry(): void {
+  const form = document.getElementById('try-form') as HTMLFormElement | null;
+  if (!form) return;
+  const addr = document.getElementById('try-addr') as HTMLInputElement;
+  const pct = document.getElementById('try-pct') as HTMLInputElement;
+  const out = document.getElementById('try-out') as HTMLElement;
+  const top = document.getElementById('try-top') as HTMLButtonElement;
+  const run = async (): Promise<void> => {
+    const address = addr.value.trim();
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) { out.replaceChildren(h('div', { class: 'error', role: 'alert' }, h('p', {}, 'Enter a full 0x wallet address (42 characters), or use the top trader button.'))); return; }
+    out.replaceChildren(h('div', { class: 'skel' }));
+    try {
+      const p = await mcpCall<Preview>('preview_wallet_alerts', { address, rules: { liquidation: { belowPct: Number(pct.value) || 5 } } });
+      const rows = p.positions.map((x) => h('tr', {},
+        h('td', {}, `${x.market} ${x.side} ${x.leverage}x`),
+        h('td', {}, `$${x.marginUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`),
+        h('td', {}, x.distanceToLiquidationPct === null ? 'unknown' : `${x.distanceToLiquidationPct.toFixed(2)}%`),
+        h('td', {}, h('span', { class: `badge ${x.wouldAlert ? 'critical' : 'sent'}` }, x.wouldAlert ? 'would alert' : 'safe'))));
+      out.replaceChildren(
+        h('p', { class: 'mute' }, `${short(p.address)}: equity $${p.equityUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}, ${p.positions.length} open position${p.positions.length === 1 ? '' : 's'}, pending rewards $${p.pendingRewardsUsdc.toFixed(2)}.`),
+        p.positions.length
+          ? h('div', { class: 'tablewrap' }, h('table', { class: 'table' }, h('thead', {}, h('tr', {}, ...['Position', 'Margin', 'Distance to liquidation', 'Status'].map((t) => h('th', {}, t)))), h('tbody', {}, ...rows)))
+          : h('div', { class: 'empty' }, h('p', {}, 'This wallet has no open positions right now. Alerts fire when it opens one.')),
+        ...p.notes.map((n) => h('p', { class: 'mute' }, n)));
+    } catch (err) { out.replaceChildren(errorBox(err, () => void run())); }
+  };
+  form.addEventListener('submit', (e) => { e.preventDefault(); void run(); });
+  top.addEventListener('click', async () => {
+    top.disabled = true;
+    try {
+      const r = await api<{ accounts: LbAccount[] }>('/api/papertrade/state/leaderboard/accounts?page=0&pageSize=15&sortDir=desc&sortKey=totalWindowedPnl&window=24h', { auth: false });
+      const pick = r.accounts.find((a) => a.currentOpenPositionCount > 0) ?? r.accounts[0];
+      if (!pick) { out.replaceChildren(h('div', { class: 'empty' }, h('p', {}, 'The leaderboard is empty right now. Paste any address instead.'))); return; }
+      addr.value = pick.address;
+      await run();
+    } catch (err) { out.replaceChildren(errorBox(err, () => top.click())); } finally { top.disabled = false; }
+  });
+}
+initTry();
 
 const themeBtn = document.getElementById('theme') as HTMLButtonElement;
 themeBtn.addEventListener('click', () => {

@@ -4,14 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Papertrade Alerts - liquidation, position and reward alerts</title>
-<meta name="description" content="Unofficial, self-hostable alerts for Papertrade wallets: liquidation distance, positions opened, closed or liquidated, session key expiry and staking rewards, delivered to Telegram, Discord or a signed webhook.">
+<meta name="description" content="Unofficial, self-hostable alerts and MCP server for Papertrade wallets: liquidation distance, positions opened, closed or liquidated, session key expiry and staking rewards, delivered to Telegram, Discord or a signed webhook.">
 <link rel="canonical" href="__ORIGIN__/">
 <meta property="og:title" content="Papertrade Alerts">
 <meta property="og:description" content="Liquidation, position and reward alerts for Papertrade wallets. Telegram, Discord and signed webhooks. Open source, runs on Cloudflare.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="__ORIGIN__/">
 <meta name="color-scheme" content="light dark">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="alternate" type="application/openapi+json" href="/openapi.json" title="OpenAPI">
+<link rel="mcp-server" href="__ORIGIN__/mcp">
 <link rel="stylesheet" href="/styles.css">
+<script src="/embed.js"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Papertrade Alerts","applicationCategory":"FinanceApplication","operatingSystem":"Web","description":"Unofficial, self-hostable alerting service for Papertrade wallets.","url":"__ORIGIN__/","license":"https://www.apache.org/licenses/LICENSE-2.0","author":{"@type":"Person","name":"nirholas"},"codeRepository":"https://github.com/nirholas/papertrade-alerts"}</script>
 </head>
 <body>
@@ -21,24 +25,87 @@
   <div class="wrap bar">
     <a class="brand" href="/" aria-label="Papertrade Alerts home"><span class="dot" aria-hidden="true"></span>Papertrade Alerts</a>
     <nav aria-label="Sections">
-      <a href="#watches">Wallets</a><a href="#channels">Channels</a><a href="#alerts">Alerts</a><a href="#protocol">Protocol</a>
+      <a class="mk" href="#features">Features</a><a class="mk" href="#connect">Connect your AI</a><a href="#your-alerts">App</a><a class="mk" href="/docs/">Docs</a>
     </nav>
+    <a class="os" id="os-link" href="https://papertrade-os.pages.dev/?open=alerts" rel="noopener">Open in Papertrade OS</a>
     <button type="button" id="theme" class="ghost" aria-label="Toggle colour theme">Theme</button>
   </div>
 </header>
 <main id="main" class="wrap">
   <section class="hero" aria-labelledby="h-hero">
+    <p class="eyebrow mk">For Papertrade wallets. Unofficial.</p>
     <h1 id="h-hero">Know before the liquidation.</h1>
-    <p class="lede">Watch any Papertrade wallet. Get a message when a position nears its bust price, opens, closes or is liquidated, when a session key is about to expire, or when staking rewards pile up. Delivered to Telegram, Discord or your own signed webhook.</p>
+    <p class="lede">Watch any Papertrade wallet. Get a message when a position nears its bust price, opens, closes or is liquidated, when a session key is about to expire, or when staking rewards pile up. Delivered to Telegram, Discord or your own signed webhook. Or let your AI agent set it all up over MCP.</p>
+    <div class="row mk">
+      <a class="btn primary" href="#your-alerts">Create a subscription</a>
+      <a class="btn" href="#connect">Connect your AI</a>
+      <a class="btn ghost" href="/docs/">Read the docs</a>
+    </div>
     <div id="status" class="chips" aria-live="polite"></div>
+    <div id="banner" hidden></div>
   </section>
+
+  <section class="card mk" id="try" aria-labelledby="h-try">
+    <h2 id="h-try">Try it on a live wallet</h2>
+    <p class="sub">Reads the real Papertrade API through the same read-only tool agents use. Nothing is stored and nobody is notified.</p>
+    <form id="try-form" class="row" autocomplete="off">
+      <div class="field"><label for="try-addr">Wallet address</label><input type="text" id="try-addr" placeholder="0x..." spellcheck="false" inputmode="text"></div>
+      <label class="field narrow" for="try-pct">Alert below (%)<input type="number" id="try-pct" value="5" min="0.001" max="50" step="any"></label>
+      <button type="submit" class="primary">Preview alerts</button>
+      <button type="button" id="try-top">Use today's top trader</button>
+    </form>
+    <div id="try-out" aria-live="polite"></div>
+  </section>
+
+  <section class="mk" id="features" aria-labelledby="h-features">
+    <h2 id="h-features" class="sec">What it watches</h2>
+    <div class="grid feat">
+      <article class="item"><h3>Liquidation distance</h3><p class="mute">Edge-triggered when mark price gets within your threshold of a position's bust price. One alert, not one per minute.</p></article>
+      <article class="item"><h3>Position lifecycle</h3><p class="mute">Opened, closed with net PnL and PAPER minted, or liquidated. Follow top traders for opens and closes.</p></article>
+      <article class="item"><h3>Session keys and rewards</h3><p class="mute">Warns before a session key lapses and when staking rewards cross the amount you care about.</p></article>
+      <article class="item"><h3>Protocol signals</h3><p class="mute">PAPER mint rate thresholds and markets going paused or close-only.</p></article>
+      <article class="item"><h3>Telegram, Discord, webhooks</h3><p class="mute">Retries with backoff, a dead-letter list, and HMAC-SHA256 signed webhooks you can verify.</p></article>
+      <article class="item"><h3>Agent-ready</h3><p class="mute">A stateless MCP server with ten tools, an OpenAPI document, llms.txt and agent cards. Read-only on funds: it can never move money.</p></article>
+    </div>
+  </section>
+
+  <section class="mk" id="connect" aria-labelledby="h-connect">
+    <h2 id="h-connect" class="sec">Connect your AI</h2>
+    <p class="sub">One URL, Streamable HTTP, no OAuth. Preview tools need no credentials.</p>
+    <div class="card">
+      <div class="row between"><code id="mcp-url" class="mono block">__ORIGIN__/mcp</code><button type="button" class="small" data-copy-from="mcp-url">Copy URL</button></div>
+      <div class="works" aria-label="Works with">
+        <span>Claude</span><span>ChatGPT</span><span>Codex</span><span>Gemini</span><span>Cursor</span><span>VS Code</span><span>Windsurf</span><span>Zed</span><span>Cline</span><span>Goose</span><span>Continue</span>
+      </div>
+      <div class="snips">
+        <div class="snip"><div class="row between"><h3>Claude Code</h3><button type="button" class="small" data-copy-from="s-claude">Copy</button></div><pre><code id="s-claude">claude mcp add --transport http papertrade-alerts __ORIGIN__/mcp</code></pre></div>
+        <div class="snip"><div class="row between"><h3>Codex CLI</h3><button type="button" class="small" data-copy-from="s-codex">Copy</button></div><pre><code id="s-codex">codex mcp add papertrade-alerts --url __ORIGIN__/mcp</code></pre></div>
+        <div class="snip"><div class="row between"><h3>Gemini CLI</h3><button type="button" class="small" data-copy-from="s-gemini">Copy</button></div><pre><code id="s-gemini">gemini mcp add --transport http papertrade-alerts __ORIGIN__/mcp</code></pre></div>
+        <div class="snip"><div class="row between"><h3>Cursor (.cursor/mcp.json)</h3><button type="button" class="small" data-copy-from="s-cursor">Copy</button></div><pre><code id="s-cursor">{ "mcpServers": { "papertrade-alerts": { "url": "__ORIGIN__/mcp" } } }</code></pre></div>
+      </div>
+      <p class="sub mt8">Claude Desktop, claude.ai, ChatGPT, VS Code, Windsurf, Zed, Cline, Goose, Continue and the API forms are in <a href="/docs/connect">Connect your AI</a>.</p>
+    </div>
+  </section>
+
+  <section class="mk" id="quickstart" aria-labelledby="h-qs">
+    <h2 id="h-qs" class="sec">Quickstart</h2>
+    <div class="card">
+      <ol class="steps">
+        <li>Create a subscription below. Copy the token: it is shown once.</li>
+        <li>Add a Discord webhook or a webhook endpoint under Channels and press Send test.</li>
+        <li>Add a wallet under Wallets. The first poll is silent, so existing positions are not announced.</li>
+      </ol>
+    </div>
+  </section>
+
+  <h2 id="your-alerts" class="sec appsec">Your alerts</h2>
   <div id="app" aria-live="polite"><div class="skel tall"></div></div>
 </main>
 <footer class="foot">
   <div class="wrap">
-    <p>Open source (Apache-2.0). Self-host it: <a href="https://github.com/nirholas/papertrade-alerts">github.com/nirholas/papertrade-alerts</a>. API: <a href="/openapi.json">/openapi.json</a>.</p>
-    <p>Related: <a href="https://github.com/nirholas/papertrade-sdk">SDK</a> <a href="https://github.com/nirholas/papertrade-ai">AI</a> <a href="https://papertrade-terminal.pages.dev">Terminal</a> <a href="https://papertrade-analytics.pages.dev">Analytics</a> <a href="https://papertrade-explorer.pages.dev">Explorer</a> <a href="https://papertrade-liquidations.pages.dev">Liquidations</a> <a href="https://papertrade-yield.pages.dev">Yield</a> <a href="https://papertrade-copytrade.pages.dev">Copytrade</a> <a href="https://papertrade-x402.pages.dev">x402</a></p>
-    <p>Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin.</p>
+    <p><a href="/docs/">Docs</a> <a href="https://github.com/nirholas/papertrade-alerts" rel="noopener">GitHub</a> <a href="/llms.txt">llms.txt</a> <a href="/mcp">MCP</a> <a href="/openapi.json">OpenAPI</a> <a href="/.well-known/mcp/server-card.json">Server card</a> <a href="/.well-known/agent-card.json">Agent card</a></p>
+    <p class="mk">Related: <a href="https://github.com/nirholas/papertrade-sdk">SDK</a> <a href="https://github.com/nirholas/papertrade-ai">AI</a> <a href="https://papertrade-terminal.pages.dev">Terminal</a> <a href="https://papertrade-analytics.pages.dev">Analytics</a> <a href="https://papertrade-explorer.pages.dev">Explorer</a> <a href="https://papertrade-liquidations.pages.dev">Liquidations</a> <a href="https://papertrade-yield.pages.dev">Yield</a> <a href="https://papertrade-copytrade.pages.dev">Copytrade</a> <a href="https://papertrade-x402.pages.dev">x402</a></p>
+    <p>Open source (Apache-2.0). Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin.</p>
   </div>
 </footer>
 <script src="/app.js" defer></script>
