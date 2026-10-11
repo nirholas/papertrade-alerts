@@ -8,7 +8,7 @@ export function openApiDocument(origin: string) {
       title: 'Papertrade Alerts API',
       version: '0.1.0',
       description: 'Unofficial, not affiliated with Papertrade. Manage alert subscriptions with a one-time management token (Authorization: Bearer ptal_...).',
-      license: { name: 'MIT', identifier: 'MIT' },
+      license: { name: 'Apache-2.0', identifier: 'Apache-2.0' },
     },
     servers: [{ url: origin }],
     components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } },

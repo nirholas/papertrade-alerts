@@ -81,4 +81,4 @@ TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... npm run telegram:webhook -- h
 
 [SDK](https://github.com/nirholas/papertrade-sdk), [AI/MCP](https://github.com/nirholas/papertrade-ai), [Terminal](https://github.com/nirholas/papertrade-terminal), [Analytics](https://github.com/nirholas/papertrade-analytics), [Explorer](https://github.com/nirholas/papertrade-explorer), [Liquidations](https://github.com/nirholas/papertrade-liquidations), [Yield](https://github.com/nirholas/papertrade-yield), [Copytrade](https://github.com/nirholas/papertrade-copytrade), [x402](https://github.com/nirholas/papertrade-x402).
 
-MIT licensed. Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin.
+Apache-2.0 licensed. Unofficial, not affiliated with Papertrade. High leverage can lose your whole margin.
