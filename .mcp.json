@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "papertrade-alerts": {
+      "type": "http",
+      "url": "https://papertrade-alerts.ninabrekkerese.workers.dev/mcp"
+    }
+  }
+}

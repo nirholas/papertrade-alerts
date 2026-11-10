@@ -1,0 +1,17 @@
+{
+  "name": "papertrade-alerts",
+  "version": "0.2.0",
+  "description": "Preview Papertrade wallet liquidation risk and manage Discord or webhook alert rules over a hosted MCP server.",
+  "author": {
+    "name": "nirholas"
+  },
+  "repository": "https://github.com/nirholas/papertrade-alerts",
+  "license": "Apache-2.0",
+  "keywords": [
+    "papertrade",
+    "alerts",
+    "liquidation",
+    "hyperevm",
+    "mcp"
+  ]
+}
