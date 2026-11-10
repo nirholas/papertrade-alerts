@@ -7,8 +7,9 @@
   "plugins": [
     {
       "name": "papertrade-alerts",
-      "source": "./",
+      "source": "./plugins/papertrade-alerts",
       "description": "Preview Papertrade wallet liquidation risk and manage Discord or webhook alert rules over a hosted MCP server.",
+      "category": "development",
       "tags": [
         "papertrade",
         "alerts",
