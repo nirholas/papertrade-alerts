@@ -1,0 +1,19 @@
+{
+  "name": "papertrade-alerts",
+  "owner": {
+    "name": "nirholas"
+  },
+  "description": "Preview Papertrade wallet liquidation risk and manage Discord or webhook alert rules over a hosted MCP server.",
+  "plugins": [
+    {
+      "name": "papertrade-alerts",
+      "source": "./",
+      "description": "Preview Papertrade wallet liquidation risk and manage Discord or webhook alert rules over a hosted MCP server.",
+      "tags": [
+        "papertrade",
+        "alerts",
+        "mcp"
+      ]
+    }
+  ]
+}
