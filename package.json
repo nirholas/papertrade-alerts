@@ -65,7 +65,7 @@
     "viem": "^2.57.4"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261010.1",
+    "@cloudflare/workers-types": "^5.20261027.1",
     "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
@@ -76,5 +76,9 @@
     "workerd@1.20261006.1": true,
     "esbuild@0.28.2": true
   },
-  "mcpName": "io.github.nirholas/papertrade-alerts"
+  "mcpName": "io.github.nirholas/papertrade-alerts",
+  "overrides": {
+    "semver": "7.8.5",
+    "tslib": "2.8.1"
+  }
 }
